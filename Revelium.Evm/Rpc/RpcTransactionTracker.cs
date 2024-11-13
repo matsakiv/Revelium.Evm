@@ -1,0 +1,118 @@
+﻿using Incendium;
+using Microsoft.Extensions.Logging;
+using Revelium.Evm.Rpc.Abstract;
+using Revelium.Evm.Rpc.Events;
+using Revelium.Evm.Rpc.Models;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Revelium.Evm.Rpc
+{
+    public class RpcTransactionTracker(
+        RpcClient rpc,
+        ILogger<RpcTransactionTracker>? logger = null) : IRpcTransactionTracker
+    {
+        public const int TRACKING_ERROR = 1;
+        public const int TIMEOUT_REACHED_ERROR = 2;
+        public const int TASK_CANCELED_ERROR = 3;
+
+        public event EventHandler<TransactionReceipt>? ReceiptReceived;
+        public event EventHandler<ErrorEventArgs>? ErrorReceived;
+        public event EventHandler<ErrorEventArgs>? Canceled;
+
+        private readonly RpcClient _rpc = rpc ?? throw new ArgumentNullException(nameof(rpc));
+        private readonly ILogger<RpcTransactionTracker>? _logger = logger;
+
+        public Task TrackTransactionAsync(
+            string txId,
+            TimeSpan updateInterval,
+            TimeSpan? timeOut = null,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.Run(async () =>
+            {
+                try
+                {
+                    var startTimeStamp = DateTimeOffset.UtcNow;
+
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        if (timeOut != null && DateTimeOffset.UtcNow >= startTimeStamp + timeOut)
+                        {
+                            Canceled?.Invoke(this, new ErrorEventArgs
+                            {
+                                TxId = txId,
+                                Error = new Error
+                                {
+                                    Code = TIMEOUT_REACHED_ERROR,
+                                    Message = "Timeout reached"
+                                }
+                            });
+                            return;
+                        }
+
+                        var (receipt, error) = await _rpc
+                            .GetTransactionReceiptAsync(txId, cancellationToken);
+
+                        if (error != null)
+                        {
+                            ErrorReceived?.Invoke(this, new ErrorEventArgs
+                            {
+                                TxId = txId,
+                                Error = error
+                            });
+                            return;
+                        }
+
+                        if (receipt != null)
+                        {
+                            ReceiptReceived?.Invoke(this, receipt);
+                            return;
+                        }
+
+                        _logger?.LogInformation("Waiting for {@txId} receipt", txId);
+
+                        await Task.Delay(updateInterval, cancellationToken);
+                    }
+
+                    Canceled?.Invoke(this, new ErrorEventArgs
+                    {
+                        TxId = txId,
+                        Error = new Error
+                        {
+                            Code = TASK_CANCELED_ERROR,
+                            Message = "Task canceled"
+                        }
+                    });
+                }
+                catch (OperationCanceledException)
+                {
+                    Canceled?.Invoke(this, new ErrorEventArgs
+                    {
+                        TxId = txId,
+                        Error = new Error
+                        {
+                            Code = TASK_CANCELED_ERROR,
+                            Message = "Task canceled"
+                        }
+                    });
+                }
+                catch (Exception e)
+                {
+                    ErrorReceived?.Invoke(this, new ErrorEventArgs
+                    {
+                        TxId = txId,
+                        Error = new Error
+                        {
+                            Code = TRACKING_ERROR,
+                            Exception = e,
+                            Message = "Transaction tracker error"
+                        }
+                    });
+                }
+
+            }, cancellationToken);
+        }
+    }
+}

@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>evm;etherlink;rpc;ethereum;blockscout;wallet</PackageTags>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/matsakiv/Revelium.Evm</RepositoryUrl>
+
+    <Authors>mativ</Authors>
+    <Version>0.0.1</Version>
+    <Description>Revelium.Evm is .NET integration library for Etherlink and EVM-compatible networks</Description>
+    <Copyright>Copyright © Igor Matsak</Copyright>
+    <Title>Revelium.Evm</Title>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\Images\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Incendium.Result" Version="1.0.4" />
+    <PackageReference Include="Incendium.RetryPolicy" Version="1.0.2" />
+    <PackageReference Include="Nethereum.Contracts" Version="4.26.0" />
+    <PackageReference Include="Nethereum.Signer" Version="4.26.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>
