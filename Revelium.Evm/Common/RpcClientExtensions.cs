@@ -33,8 +33,8 @@ namespace Revelium.Evm.Common
             CancellationToken cancellationToken = default)
         {
             var nonceManager = NonceManager.GetOrAddInstance(
-                networkId: networkId ?? "",
-                address: tx.From);
+                address: tx.From,
+                networkId: networkId);
 
             var (nonce, nonceError) = await nonceManager.GetNonceAsync(
                 rpc: rpc,

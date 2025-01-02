@@ -1,7 +1,13 @@
 # Revelium.Evm
 [![License: MIT](https://img.shields.io/github/license/matsakiv/Revelium.Evm)](https://opensource.org/licenses/MIT) ![NuGet Version](https://img.shields.io/nuget/v/Revelium.Evm) ![NuGet Downloads](https://img.shields.io/nuget/dt/Revelium.Evm)
 
-Revelium.Evm is .NET standard 2.1 integration library for EVM-compatible networks.
+Revelium.Evm is .NET standard 2.1 integration library for EVM-compatible networks,  aimed primarily at creating transaction-intensive applications (trading bots, etc.).
+
+In addition to the basic capabilities of creating, signing and sending EVM transactions (including EIP-1559), the library also contains:
+- `NonceManager` to effective offline Nonce management and send transactions without waiting for confirmations;
+- `RpcCallSequencer` to manage the queue of sent transactions. If the Rpc has a limit on the number of transactions from one address, the class allows you to not exceed the limits, streamline sending, and allows you to cancel queued calls that have not yet been sent to the Rpc;
+- `RpcClient` with built-in support for limiting the number of requests per unit of time and requests retries in case of errors with support for various strategies;
+- `BlockScoutApi` for BlockScout explorer.
 
 ## Getting started
 
@@ -9,7 +15,7 @@ Revelium.Evm is .NET standard 2.1 integration library for EVM-compatible network
 
 `PM> Install-Package Revelium.Evm`
 
-### Create, sign and send transaction (long way)
+### Create, sign and send transaction (short way)
 
 Let's create new wallet and signer:
 ```cs
@@ -20,15 +26,48 @@ var fromAddress = signer.GetAddress();
 
 To interact with the Etherlink test network, let's create an rpc client:
 ```cs
-var rpc = new RpcClient(url: RpcClient.ETHERLINK_TESTNET);
+var rpc = new RpcClient(url: RpcUrl.ETHERLINK_GHOSTNET);
 ```
 
-Now we need a transaction counter for the nonce. To do this, we will use the nonce manager, which allows you to send transactions without waiting for confirmation of previous ones:
+Now we are ready to create and send the transaction:
 ```cs
-var (nonce, nonceError) = await NonceManager.Instance.GetNonceAsync(
-    rpc: rpc,
-    address: fromAddress,
-    pending: true);
+var tx = new TransactionLegacyRequest
+{
+    From = fromAddress,
+    To = "<TOKEN_CONTRACT_ADDRESS>",
+    GasPrice = 100_000_000,
+    Data = new Approve
+    {
+        Spender = "<SPENDER_ADDRESS>",
+        Value = 1_000_000_000_000
+    }.CreateTransactionInput("<TOKEN_CONTRACT_ADDRESS>").Data
+};
+
+var (txId, error) = await rpc.SignAndSendLegacyTransactionAsync(
+    tx: tx,
+    signer: signer,
+    estimateGas: true,
+    cancellationToken: cancellationToken);
+```
+
+And finally, as an example, we will receive the submitted transaction via the BlockScout API:
+```cs
+var api = new BlockScoutApi(BlockScoutApi.ETHERLINK_TESTNET);
+var tx = await api.GetTransactionAsync(txId);
+```
+
+
+### Create, sign and send transaction (long detailed way)
+
+Let's look at a more detailed and low-level transaction creation:
+
+First of all, we need a transaction counter for the nonce. To do this, we will use the nonce manager, which allows you to send transactions without waiting for confirmation of previous ones:
+```cs
+var (nonce, nonceError) = await NonceManager
+    .GetOrAddInstance(fromAddress)
+    .GetNonceAsync(
+        rpc: rpc,
+        pending: true);
 
 if (nonceError != null) { /* do something if necessary */ }
 ```
@@ -70,33 +109,4 @@ signer.Sign(request);
 if (!request.Verify()) { /* do something if necessary */ }
 
 var (txId, error) = await rpc.SendRawTransactionAsync(request);
-```
-
-And at the end we will receive the sent transaction via the BlockScout API:
-```cs
-var api = new BlockScoutApi(BlockScoutApi.ETHERLINK_TESTNET);
-var tx = await api.GetTransactionAsync(txId);
-```
-
-### Create, sign and send transaction (short way)
-
-The same thing can be done in a shorter way using a helper method:
-```cs
-var tx = new TransactionLegacyRequest
-{
-    From = fromAddress,
-    To = "<TOKEN_CONTRACT_ADDRESS>",
-    GasPrice = 100_000_000,
-    Data = new Approve
-    {
-        Spender = "<SPENDER_ADDRESS>",
-        Value = 1_000_000_000_000
-    }.CreateTransactionInput("<TOKEN_CONTRACT_ADDRESS>").Data
-};
-
-var (txId, error) = await rpc.SignAndSendLegacyTransactionAsync(
-    tx: tx,
-    signer: signer,
-    estimateGas: true,
-    cancellationToken: cancellationToken);
 ```

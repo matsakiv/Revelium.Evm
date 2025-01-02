@@ -27,9 +27,33 @@ namespace Revelium.Evm.Common
 
             var (hexResult, error) = await rpc.CallAsync<string>(
                 to: tokenContract,
-                from: spender,
                 input: allowance.CreateTransactionInput(tokenContract).Data,
                 block: BlockNumber.Latest,
+                cancellationToken: cancellationToken);
+
+            if (error != null)
+                return error;
+
+            return new HexBigInteger(hexResult).Value;
+        }
+
+        public static async Task<Result<BigInteger>> GetErc20TokenBalanceAsync(
+            this RpcClient rpc,
+            string tokenContract,
+            string account,
+            BlockNumber? defaultBlock = null,
+            BigInteger? chainId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var balanceOf = new BalanceOf()
+            {
+                Account = account
+            };
+
+            var (hexResult, error) = await rpc.CallAsync<string>(
+                to: tokenContract,
+                input: balanceOf.CreateTransactionInput(tokenContract, chainId ?? BigInteger.Zero).Data,
+                block: defaultBlock,
                 cancellationToken: cancellationToken);
 
             if (error != null)

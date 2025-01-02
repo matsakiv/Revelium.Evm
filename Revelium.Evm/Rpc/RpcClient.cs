@@ -18,12 +18,6 @@ namespace Revelium.Evm.Rpc
 {
     public class RpcClient(string url, HttpClient? httpClient = null)
     {
-        public const string ETHERLINK = "https://node.mainnet.etherlink.com";
-        public const string ETHERLINK_TESTNET = "https://node.ghostnet.etherlink.com";
-        public const string ARBITRUM_SEPOLIA = "https://sepolia-rollup.arbitrum.io/rpc";
-        public const string ETHEREUM_SEPOLIA = "https://rpc2.sepolia.org";
-        public const int ETHERLINK_TESTNET_CHAIN_ID = 128123;
-
         private readonly HttpClient _httpClient = httpClient ?? new HttpClient();
 
         public string Url { get; } = url;
@@ -98,6 +92,27 @@ namespace Revelium.Evm.Rpc
                 id = 1,
                 jsonrpc = "2.0",
                 method = "eth_gasPrice",
+                @params = Array.Empty<string>()
+            };
+
+            var (response, error) = await SendAsync<string>(
+                jsonBody: JsonSerializer.Serialize(body),
+                cancellationToken: cancellationToken);
+
+            if (error != null)
+                return error;
+
+            return new HexBigInteger(response).Value;
+        }
+
+        public async Task<Result<BigInteger>> GetMaxPriorityFeePerGasAsync(
+            CancellationToken cancellationToken = default)
+        {
+            var body = new
+            {
+                id = 1,
+                jsonrpc = "2.0",
+                method = "eth_maxPriorityFeePerGas",
                 @params = Array.Empty<string>()
             };
 

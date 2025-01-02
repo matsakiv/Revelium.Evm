@@ -24,20 +24,20 @@ namespace Revelium.Evm.Rpc
         private NonceEntry? _networkNonceEntry;
         private readonly SemaphoreSlim _sync;
 
-        public string NetworkId { get; }
+        public string? NetworkId { get; }
         public string Address { get; }
 
-        private NonceManager(string networkId, string address)
+        private NonceManager(string address, string? networkId = null)
         {
-            NetworkId = networkId;
             Address = address;
+            NetworkId = networkId;
 
             _sync = new SemaphoreSlim(initialCount: 1);
         }
 
         private static ConcurrentDictionary<string, NonceManager>? _instances;
 
-        public static NonceManager GetOrAddInstance(string networkId, string address)
+        public static NonceManager GetOrAddInstance(string address, string? networkId = null)
         {
             var instances = _instances;
 
@@ -47,7 +47,7 @@ namespace Revelium.Evm.Rpc
                 instances = _instances;
             }
 
-            return instances.GetOrAdd($"{networkId}:{address}", id => new NonceManager(networkId, address));
+            return instances.GetOrAdd($"{networkId ?? ""}:{address}", id => new NonceManager(address, networkId));
         }
 
         public async Task<Result<BigInteger>> GetNonceAsync(

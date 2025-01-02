@@ -16,23 +16,23 @@ namespace Revelium.Evm.Transactions
 
     public class Transaction1559Request : TransactionRequestBase
     {
-        public BigInteger MaxFeePerGas { get; set; }
-        public BigInteger MaxPriorityFeePerGas { get; set; }
+        public BigInteger? MaxFeePerGas { get; set; }
+        public BigInteger? MaxPriorityFeePerGas { get; set; }
         public List<AccessList>? AccessList { get; set; }
 
         public Transaction1559Request() { }
 
-        public Transaction1559Request(TransactionInput txInput, BigInteger chainId)
+        public Transaction1559Request(TransactionInput txInput)
         {
             From                 = txInput.From.ToLowerInvariant();
             To                   = txInput.To.ToLowerInvariant();
-            Value                = txInput.Value ?? BigInteger.Zero;
-            Nonce                = txInput.Nonce ?? BigInteger.Zero;
-            MaxFeePerGas         = txInput.MaxFeePerGas ?? BigInteger.Zero;
-            MaxPriorityFeePerGas = txInput.MaxPriorityFeePerGas ?? BigInteger.Zero;
-            GasLimit             = txInput.Gas ?? BigInteger.Zero;
+            Value                = txInput.Value?.Value ?? BigInteger.Zero;
+            Nonce                = txInput.Nonce?.Value ?? BigInteger.Zero;
+            MaxFeePerGas         = txInput.MaxFeePerGas?.Value ?? null;
+            MaxPriorityFeePerGas = txInput.MaxPriorityFeePerGas?.Value ?? null;
+            GasLimit             = txInput.Gas?.Value ?? BigInteger.Zero;
             Data                 = txInput.Data;
-            ChainId              = chainId;
+            ChainId              = txInput.ChainId?.Value ?? BigInteger.Zero;
             AccessList           = txInput.AccessList
                 ?.Select(a => new AccessList
                 {
@@ -58,7 +58,7 @@ namespace Revelium.Evm.Transactions
                 })
                 .ToList();
 
-            return new Transaction1559(
+            var tx = new Transaction1559(
                 chainId: ChainId,
                 nonce: Nonce,
                 maxPriorityFeePerGas: MaxPriorityFeePerGas,
@@ -67,8 +67,11 @@ namespace Revelium.Evm.Transactions
                 receiverAddress: To,
                 amount: Value,
                 data: Data,
-                accessList: accessList,
-                signature: signature);
+                accessList: accessList);
+
+            tx.SetSignature(signature);
+
+            return tx;
         }
     }
 }

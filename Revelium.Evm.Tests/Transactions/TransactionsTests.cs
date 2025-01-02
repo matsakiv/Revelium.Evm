@@ -62,7 +62,7 @@ namespace Revelium.Evm.Transactions
                 MaxPriorityFeePerGas = 1,
                 Nonce = 1,
                 Value = 1_000_000,
-                ChainId = RpcClient.ETHERLINK_TESTNET_CHAIN_ID
+                ChainId = ChainId.ETHERLINK_GHOSTNET
             };
 
             var signer = new Eip1559EcdsaSigner(aliceKey);
