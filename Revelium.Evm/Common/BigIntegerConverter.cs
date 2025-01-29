@@ -11,7 +11,10 @@ namespace Revelium.Evm.Common
         public override BigInteger Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType != JsonTokenType.Number && reader.TokenType != JsonTokenType.String)
-                throw new JsonException(string.Format("Found token {0} but expected token {1}", reader.TokenType, JsonTokenType.Number));
+                throw new JsonException(
+                    string.Format("Found token {0} but expected token {1}",
+                    reader.TokenType,
+                    JsonTokenType.Number));
 
             using var document = JsonDocument.ParseValue(ref reader);
 

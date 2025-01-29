@@ -19,8 +19,8 @@ namespace Revelium.Evm.Common
             CancellationToken cancellationToken = default)
         {
             return rpc.SendRawTransactionAsync(
-                signedTransactionData: transaction.GetRlpEncoded(),
-                cancellationToken: cancellationToken);
+                transaction.GetRlpEncoded(),
+                cancellationToken);
         }
 
         public static async Task<Result<string>> SignAndSendTransactionAsync(
@@ -32,14 +32,13 @@ namespace Revelium.Evm.Common
             string? networkId = null,
             CancellationToken cancellationToken = default)
         {
-            var nonceManager = NonceManager.GetOrAddInstance(
-                address: tx.From,
-                networkId: networkId);
+            var nonceManager = NonceManager.GetOrAddInstance(tx.From, networkId);
 
             var (nonce, nonceError) = await nonceManager.GetNonceAsync(
-                rpc: rpc,
+                rpc,
                 pending: true,
-                cancellationToken: cancellationToken);
+                logger: null,
+                cancellationToken);
 
             if (nonceError != null)
                 return nonceError;
@@ -67,11 +66,7 @@ namespace Revelium.Evm.Common
             signer.Sign(tx);
 
             if (!tx.Verify())
-            {
-                return new Error(
-                    code: Errors.TX_VERIFY_ERROR,
-                    message: "Can't verify transaction");
-            }
+                return new Error(Errors.TX_VERIFY_ERROR, "Can't verify transaction");
 
             return await rpc.SendTransactionAsync(tx, cancellationToken);
         }

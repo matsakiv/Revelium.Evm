@@ -18,8 +18,7 @@ namespace Revelium.Evm.Rpc
         ISigner signer,
         int capacity,
         string? networkId = null) : BoundedCallSequencer<TransactionRequestParams, string>(
-            handlerCallback: CreateHandlerCallback(rpc, signer),
-            capacity: capacity)
+            CreateHandlerCallback(rpc, signer), capacity)
     {
         private static ConcurrentDictionary<string, RpcCallSequencer>? _instances;
 

@@ -58,11 +58,9 @@ namespace Revelium.Evm.Rpc
         {
             var (transactionCount, error) = await rpc
                 .GetTransactionCountAsync(
-                    address: Address,
-                    block: pending
-                        ? BlockNumber.Pending
-                        : BlockNumber.Latest,
-                    cancellationToken: cancellationToken)
+                    Address,
+                    pending ? BlockNumber.Pending : BlockNumber.Latest,
+                    cancellationToken)
                 .ConfigureAwait(false);
 
             if (error != null)
@@ -71,7 +69,7 @@ namespace Revelium.Evm.Rpc
             var nonceTimeStamp = DateTimeOffset.UtcNow;
             var nonce = transactionCount;
 
-            logger?.LogDebug("Nonce from network: {@nonce}", nonce.ToString());
+            logger?.LogDebug("Network nonce is {@nonce}", nonce.ToString());
 
             try
             {
@@ -80,7 +78,7 @@ namespace Revelium.Evm.Rpc
                 if (_networkNonceEntry != null && _networkNonceEntry.Nonce > nonce)
                 {
                     logger?.LogWarning(
-                        "Network nonce: {@nonce} less than last network nonce: {@lastNonce}",
+                        "Current network nonce {@nonce} is less than previously recorded network nonce {@lastNonce}",
                         nonce.ToString(),
                         _networkNonceEntry.Nonce.ToString());
                 }
@@ -106,7 +104,7 @@ namespace Revelium.Evm.Rpc
                     _offlineNonceEntry.LastUpdated - _networkNonceEntry.LastUpdated >= TimeSpan.FromSeconds(NONCE_VALID_PERIOD_SEC))
                 {
                     logger?.LogWarning(
-                        "Network nonce lags behind offline nonce by more than {@sec} seconds",
+                        "Network nonce lags behind offline nonce by more than {@seconds} seconds",
                         (_offlineNonceEntry.LastUpdated - _networkNonceEntry.LastUpdated).TotalSeconds);
                 }
 
@@ -132,11 +130,9 @@ namespace Revelium.Evm.Rpc
         {
             var (transactionCount, error) = await rpc
                 .GetTransactionCountAsync(
-                    address: Address,
-                    block: pending
-                        ? BlockNumber.Pending
-                        : BlockNumber.Latest,
-                    cancellationToken: cancellationToken)
+                    Address,
+                    pending ? BlockNumber.Pending : BlockNumber.Latest,
+                    cancellationToken)
                 .ConfigureAwait(false);
 
             if (error != null)
@@ -145,7 +141,7 @@ namespace Revelium.Evm.Rpc
             var nonceTimeStamp = DateTimeOffset.UtcNow;
             var nonce = transactionCount;
 
-            logger?.LogDebug("Nonce from network: {@nonce}", nonce.ToString());
+            logger?.LogDebug("Network nonce is {@nonce}", nonce.ToString());
 
             try
             {

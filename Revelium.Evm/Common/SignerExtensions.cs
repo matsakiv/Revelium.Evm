@@ -22,9 +22,7 @@ namespace Revelium.Evm.Common
             this ISigner signer,
             TransactionRequestBase request)
         {
-            return signer.Verify(
-                hash: request.GetRawHash(),
-                signature: request.GetSignatureInDer());
+            return signer.Verify(request.GetRawHash(), request.GetSignatureInDer());
         }
     }
 }

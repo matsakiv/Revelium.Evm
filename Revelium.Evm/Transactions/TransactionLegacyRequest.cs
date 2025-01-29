@@ -13,14 +13,14 @@ namespace Revelium.Evm.Transactions
 
         public TransactionLegacyRequest(TransactionInput txInput)
         {
-            From     = txInput.From.ToLowerInvariant();
-            To       = txInput.To.ToLowerInvariant();
-            Value    = txInput.Value?.Value ?? BigInteger.Zero;
-            Nonce    = txInput.Nonce?.Value ?? BigInteger.Zero;
+            From = txInput.From.ToLowerInvariant();
+            To = txInput.To.ToLowerInvariant();
+            Value = txInput.Value?.Value ?? BigInteger.Zero;
+            Nonce = txInput.Nonce?.Value ?? BigInteger.Zero;
             GasPrice = txInput.GasPrice?.Value ?? BigInteger.Zero;
             GasLimit = txInput.Gas?.Value ?? BigInteger.Zero;
-            Data     = txInput.Data;
-            ChainId  = txInput.ChainId?.Value ?? BigInteger.Zero;
+            Data = txInput.Data;
+            ChainId = txInput.ChainId?.Value ?? BigInteger.Zero;
         }
 
         public override SignedTransaction GetTransaction()

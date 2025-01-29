@@ -32,10 +32,10 @@ namespace Revelium.Evm.BlockScout
             CancellationToken cancellationToken = default)
         {
             return await SendAsync<Stats>(
-                requestUrl: $"api/v2/stats",
-                body: null,
-                method: HttpMethod.Get,
-                cancellationToken: cancellationToken);
+                $"api/v2/stats",
+                content: null,
+                HttpMethod.Get,
+                cancellationToken);
         }
 
         #region Tokens
@@ -45,10 +45,10 @@ namespace Revelium.Evm.BlockScout
             CancellationToken cancellationToken = default)
         {
             return await SendAsync<Token>(
-                requestUrl: $"api/v2/tokens/{address}",
-                body: null,
-                method: HttpMethod.Get,
-                cancellationToken: cancellationToken);
+                $"api/v2/tokens/{address}",
+                content: null,
+                HttpMethod.Get,
+                cancellationToken);
         }
 
         public async Task<Result<List<Transfer>>> GetTokenTransfersAsync(
@@ -78,10 +78,10 @@ namespace Revelium.Evm.BlockScout
                     requestUrl += $"?{string.Join('&', requestParams)}";
 
                 var (response, error) = await SendAsync<Response<Transfer>>(
-                    requestUrl: requestUrl,
-                    body: null,
-                    method: HttpMethod.Get,
-                    cancellationToken: cancellationToken);
+                    requestUrl,
+                    content: null,
+                    HttpMethod.Get,
+                    cancellationToken);
 
                 if (error != null)
                     return error;
@@ -128,10 +128,10 @@ namespace Revelium.Evm.BlockScout
                     requestUrl += $"?{string.Join('&', requestParams)}";
 
                 var (response, error) = await SendAsync<Response<Holder>>(
-                    requestUrl: requestUrl,
-                    body: null,
-                    method: HttpMethod.Get,
-                    cancellationToken: cancellationToken);
+                    requestUrl,
+                    content: null,
+                    HttpMethod.Get,
+                    cancellationToken);
 
                 if (error != null)
                     return error;
@@ -160,10 +160,10 @@ namespace Revelium.Evm.BlockScout
             CancellationToken cancellationToken = default)
         {
             return await SendAsync<List<TokenBalance>>(
-                requestUrl: $"api/v2/addresses/{address}/token-balances",
-                body: null,
-                method: HttpMethod.Get,
-                cancellationToken: cancellationToken);
+                $"api/v2/addresses/{address}/token-balances",
+                content: null,
+                HttpMethod.Get,
+                cancellationToken);
         }
 
         public async Task<Result<List<Transfer>>> GetAddressTokenTransfersAsync(
@@ -201,10 +201,10 @@ namespace Revelium.Evm.BlockScout
                     requestUrl += $"?{string.Join('&', requestParams)}";
 
                 var (response, error) = await SendAsync<Response<Transfer>>(
-                    requestUrl: requestUrl,
-                    body: null,
-                    method: HttpMethod.Get,
-                    cancellationToken: cancellationToken);
+                    requestUrl,
+                    content: null,
+                    HttpMethod.Get,
+                    cancellationToken);
 
                 if (error != null)
                     return error;
@@ -264,10 +264,10 @@ namespace Revelium.Evm.BlockScout
                     requestUrl += $"?{string.Join('&', requestParams)}";
 
                 var (response, error) = await SendAsync<Response<Transaction>>(
-                    requestUrl: requestUrl,
-                    body: null,
-                    method: HttpMethod.Get,
-                    cancellationToken: cancellationToken);
+                    requestUrl,
+                    content: null,
+                    HttpMethod.Get,
+                    cancellationToken);
 
                 if (error != null)
                     return error;
@@ -325,10 +325,10 @@ namespace Revelium.Evm.BlockScout
                     requestUrl += $"?{string.Join('&', requestParams)}";
 
                 var (response, error) = await SendAsync<Response<Log>>(
-                    requestUrl: requestUrl,
-                    body: null,
-                    method: HttpMethod.Get,
-                    cancellationToken: cancellationToken);
+                    requestUrl,
+                    content: null,
+                    HttpMethod.Get,
+                    cancellationToken);
 
                 if (error != null)
                     return error;
@@ -353,10 +353,10 @@ namespace Revelium.Evm.BlockScout
             CancellationToken cancellationToken = default)
         {
             return await SendAsync<AddressCounters>(
-                requestUrl: $"api/v2/addresses/{address}/counters",
-                body: null,
-                method: HttpMethod.Get,
-                cancellationToken: cancellationToken);
+                $"api/v2/addresses/{address}/counters",
+                content: null,
+                HttpMethod.Get,
+                cancellationToken);
         }
 
         #endregion Addresses
@@ -368,10 +368,10 @@ namespace Revelium.Evm.BlockScout
             CancellationToken cancellationToken = default)
         {
             return await SendAsync<Transaction>(
-                requestUrl: $"api/v2/transactions/{hash}",
-                body: null,
-                method: HttpMethod.Get,
-                cancellationToken: cancellationToken);
+                $"api/v2/transactions/{hash}",
+                content: null,
+                HttpMethod.Get,
+                cancellationToken);
         }
 
         public async Task<Result<List<Transfer>>> GetTransactionTokenTransfersAsync(
@@ -401,10 +401,10 @@ namespace Revelium.Evm.BlockScout
                     requestUrl += $"?{string.Join('&', requestParams)}";
 
                 var (response, error) = await SendAsync<Response<Transfer>>(
-                    requestUrl: requestUrl,
-                    body: null,
-                    method: HttpMethod.Get,
-                    cancellationToken: cancellationToken);
+                    requestUrl,
+                    content: null,
+                    HttpMethod.Get,
+                    cancellationToken);
 
                 if (error != null)
                     return error;
@@ -451,10 +451,10 @@ namespace Revelium.Evm.BlockScout
                     requestUrl += $"?{string.Join('&', requestParams)}";
 
                 var (response, error) = await SendAsync<Response<Log>>(
-                    requestUrl: requestUrl,
-                    body: null,
-                    method: HttpMethod.Get,
-                    cancellationToken: cancellationToken);
+                    requestUrl,
+                    content: null,
+                    HttpMethod.Get,
+                    cancellationToken);
 
                 if (error != null)
                     return error;
@@ -478,15 +478,12 @@ namespace Revelium.Evm.BlockScout
 
         private async Task<Result<TResult>> SendAsync<TResult>(
             string requestUrl,
-            string? body,
+            string? content,
             HttpMethod method,
             CancellationToken cancellationToken = default)
         {
-            var requestContent = body != null
-                ? new StringContent(
-                    content: body,
-                    encoding: Encoding.UTF8,
-                    mediaType: "application/json")
+            var requestContent = content != null
+                ? new StringContent(content, Encoding.UTF8, "application/json")
                 : null;
 
             var requestMessage = new HttpRequestMessage

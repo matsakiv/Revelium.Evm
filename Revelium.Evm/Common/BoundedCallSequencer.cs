@@ -65,8 +65,8 @@ namespace Revelium.Evm.Common
             CancellationToken cancellationToken = default)
         {
             var result = await _pendingQueue.RemoveAsync(
-                predicate: cd => cd.Id == callId,
-                cancellationToken: cancellationToken);
+                x => x.Id == callId,
+                cancellationToken);
 
             _ = RunQueueProcessingInBackground(cancellationToken);
 
@@ -78,7 +78,7 @@ namespace Revelium.Evm.Common
             CancellationToken cancellationToken = default)
         {
             var removed = await _waitingQueue.RemoveAsync(
-                cd => cd.Id == callId,
+                x => x.Id == callId,
                 cancellationToken);
 
             return removed > 0;
@@ -103,9 +103,7 @@ namespace Revelium.Evm.Common
                     {
                         OnError?.Invoke(this, new ErrorEventArgs
                         {
-                            Error = new Error(
-                                code: PROCESS_QUEUE_ERROR,
-                                message: "Wait to enqueue error")
+                            Error = new Error(PROCESS_QUEUE_ERROR, "Wait to enqueue error")
                         });
                         return;
                     }
@@ -117,15 +115,12 @@ namespace Revelium.Evm.Common
 
                     // call handler
                     var (result, error) = await _handlerCallback(
-                        parameters: callData.Parameters,
-                        cancellationToken: cancellationToken);
+                        callData.Parameters,
+                        cancellationToken);
 
                     if (error != null)
                     {
-                        var handlerError = new Error(
-                            code: PROCESS_QUEUE_ERROR,
-                            message: "Handler callback error",
-                            error: error);
+                        var handlerError = new Error(PROCESS_QUEUE_ERROR, "Handler callback error", error);
 
                         if (callData.OnError != null)
                         {
@@ -174,10 +169,7 @@ namespace Revelium.Evm.Common
             {
                 OnError?.Invoke(this, new ErrorEventArgs
                 {
-                    Error = new Error(
-                        code: PROCESS_QUEUE_ERROR,
-                        message: "Wait to enqueue error",
-                        exception: e)
+                    Error = new Error(PROCESS_QUEUE_ERROR, "Wait to enqueue error", e)
                 });
             }
             finally

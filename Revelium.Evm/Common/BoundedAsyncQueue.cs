@@ -5,6 +5,11 @@ using System.Threading.Tasks;
 
 namespace Revelium.Evm.Common
 {
+    /// <summary>
+    /// Represents a thread-safe bounded queue with asynchronous operations.
+    /// The queue has a fixed capacity and provides methods for asynchronous enqueuing and dequeuing of items.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the queue.</typeparam>
     public class BoundedAsyncQueue<T>(int capacity) : IDisposable
     {
         private readonly int _capacity = capacity;
@@ -13,10 +18,27 @@ namespace Revelium.Evm.Common
         private readonly Queue<TaskCompletionSource<bool>> _completions = new();
         private bool _disposed;
 
+        /// <summary>
+        /// Gets the current number of items in the queue.
+        /// </summary>
         public int Count => _data.Count;
+
+        /// <summary>
+        /// Gets a value indicating whether the queue is empty.
+        /// </summary>
         public bool IsEmpty => _data.Count == 0;
+
+        /// <summary>
+        /// Gets the maximum capacity of the queue.
+        /// </summary>
         public int Capacity => _capacity;
 
+        /// <summary>
+        /// Asynchronously adds an item to the queue. If the queue is full, waits until space becomes available.
+        /// </summary>
+        /// <param name="item">The item to add to the queue.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>A task that completes when the item is added to the queue.</returns>
         public async Task EnqueueAsync(
             T item,
             CancellationToken cancellationToken = default)
@@ -57,6 +79,12 @@ namespace Revelium.Evm.Common
             }
         }
 
+        /// <summary>
+        /// Attempts to add an item to the queue without waiting. Returns false if the queue is full.
+        /// </summary>
+        /// <param name="item">The item to add to the queue.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>True if the item was added; false if the queue was full or the operation was canceled.</returns>
         public async Task<bool> TryEnqueueAsync(
             T item,
             CancellationToken cancellationToken = default)
@@ -81,6 +109,11 @@ namespace Revelium.Evm.Common
             }
         }
 
+        /// <summary>
+        /// Waits until space becomes available in the queue.
+        /// </summary>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>True if space became available; false if the operation was canceled.</returns>
         public async Task<bool> WaitToEnqueueAsync(
             CancellationToken cancellationToken = default)
         {
@@ -123,6 +156,11 @@ namespace Revelium.Evm.Common
             }
         }
 
+        /// <summary>
+        /// Attempts to remove and return an item from the beginning of the queue.
+        /// </summary>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>A tuple containing the dequeued item and a boolean indicating success.</returns>
         public async Task<(T, bool)> TryDequeue(
             CancellationToken cancellationToken = default)
         {
@@ -147,6 +185,11 @@ namespace Revelium.Evm.Common
             }
         }
 
+        /// <summary>
+        /// Attempts to return the first item in the queue without removing it.
+        /// </summary>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>A tuple containing the first item and a boolean indicating success.</returns>
         public async Task<(T, bool)> TryPeek(
             CancellationToken cancellationToken = default)
         {
@@ -165,6 +208,12 @@ namespace Revelium.Evm.Common
             }
         }
 
+        /// <summary>
+        /// Removes all items that match the specified predicate.
+        /// </summary>
+        /// <param name="predicate">A function to test each element for a condition.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The number of elements removed from the queue.</returns>
         public async Task<int> RemoveAsync(
             Predicate<T> predicate,
             CancellationToken cancellationToken = default)
@@ -209,6 +258,9 @@ namespace Revelium.Evm.Common
             }
         }
 
+        /// <summary>
+        /// Releases all resources used by the queue.
+        /// </summary>
         public void Dispose()
         {
             Dispose(disposing: true);

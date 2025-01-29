@@ -43,11 +43,7 @@ namespace Revelium.Evm.Rpc
                             Canceled?.Invoke(this, new ErrorEventArgs
                             {
                                 TxId = txId,
-                                Error = new Error
-                                {
-                                    Code = TIMEOUT_REACHED_ERROR,
-                                    Message = "Timeout reached"
-                                }
+                                Error = new Error(TIMEOUT_REACHED_ERROR, "Timeout reached")
                             });
                             return;
                         }
@@ -79,23 +75,16 @@ namespace Revelium.Evm.Rpc
                     Canceled?.Invoke(this, new ErrorEventArgs
                     {
                         TxId = txId,
-                        Error = new Error
-                        {
-                            Code = TASK_CANCELED_ERROR,
-                            Message = "Task canceled"
-                        }
+                        Error = new Error(TASK_CANCELED_ERROR, "Task canceled")
                     });
+
                 }
                 catch (OperationCanceledException)
                 {
                     Canceled?.Invoke(this, new ErrorEventArgs
                     {
                         TxId = txId,
-                        Error = new Error
-                        {
-                            Code = TASK_CANCELED_ERROR,
-                            Message = "Task canceled"
-                        }
+                        Error = new Error(TASK_CANCELED_ERROR, "Task canceled")
                     });
                 }
                 catch (Exception e)
@@ -103,12 +92,7 @@ namespace Revelium.Evm.Rpc
                     ErrorReceived?.Invoke(this, new ErrorEventArgs
                     {
                         TxId = txId,
-                        Error = new Error
-                        {
-                            Code = TRACKING_ERROR,
-                            Exception = e,
-                            Message = "Transaction tracker error"
-                        }
+                        Error = new Error(TRACKING_ERROR, "Transaction tracker error", e)
                     });
                 }
 

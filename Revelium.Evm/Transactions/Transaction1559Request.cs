@@ -24,22 +24,20 @@ namespace Revelium.Evm.Transactions
 
         public Transaction1559Request(TransactionInput txInput)
         {
-            From                 = txInput.From.ToLowerInvariant();
-            To                   = txInput.To.ToLowerInvariant();
-            Value                = txInput.Value?.Value ?? BigInteger.Zero;
-            Nonce                = txInput.Nonce?.Value ?? BigInteger.Zero;
-            MaxFeePerGas         = txInput.MaxFeePerGas?.Value ?? null;
+            From = txInput.From.ToLowerInvariant();
+            To = txInput.To.ToLowerInvariant();
+            Value = txInput.Value?.Value ?? BigInteger.Zero;
+            Nonce = txInput.Nonce?.Value ?? BigInteger.Zero;
+            MaxFeePerGas = txInput.MaxFeePerGas?.Value ?? null;
             MaxPriorityFeePerGas = txInput.MaxPriorityFeePerGas?.Value ?? null;
-            GasLimit             = txInput.Gas?.Value ?? BigInteger.Zero;
-            Data                 = txInput.Data;
-            ChainId              = txInput.ChainId?.Value ?? BigInteger.Zero;
-            AccessList           = txInput.AccessList
-                ?.Select(a => new AccessList
-                {
-                    Address = a.Address,
-                    StorageKeys = a.StorageKeys
-                })
-                .ToList();
+            GasLimit = txInput.Gas?.Value ?? BigInteger.Zero;
+            Data = txInput.Data;
+            ChainId = txInput.ChainId?.Value ?? BigInteger.Zero;
+            AccessList = txInput.AccessList?.Select(a => new AccessList
+            {
+                Address = a.Address,
+                StorageKeys = a.StorageKeys
+            }).ToList();
         }
 
         public override SignedTransaction GetTransaction()
@@ -52,9 +50,7 @@ namespace Revelium.Evm.Transactions
                 ?.Select(a => new AccessListItem
                 {
                     Address = a.Address,
-                    StorageKeys = a.StorageKeys
-                        .Select(k => Hex.FromString(k))
-                        .ToList()
+                    StorageKeys = [.. a.StorageKeys.Select(k => Hex.FromString(k))]
                 })
                 .ToList();
 

@@ -16,6 +16,10 @@ using System.Threading.Tasks;
 
 namespace Revelium.Evm.Rpc
 {
+    /// <summary>
+    /// Provides a client for making JSON-RPC calls to Ethereum-compatible nodes.
+    /// Supports standard Ethereum JSON-RPC methods with automatic error handling and retries.
+    /// </summary>
     public class RpcClient(string url, long? chainId = null, HttpClient? httpClient = null)
     {
         private readonly HttpClient _httpClient = httpClient ?? new HttpClient();
@@ -23,14 +27,25 @@ namespace Revelium.Evm.Rpc
         public string Url { get; } = url;
         public long? ChainId { get; } = chainId;
 
+        /// <summary>
+        /// Initializes a new instance of the RpcClient class with the specified configuration.
+        /// </summary>
+        /// <param name="config">Configuration containing URL, chain ID, and rate limiting settings.</param>
         public RpcClient(RpcConfig config) : this(config.Url, config.ChainId, CreateHttpClient(
-            rateLimit: config.RateLimit,
-            rateLimitTimeUnitSec: config.RateLimitTimeUnitSec,
-            retryCount: config.RetryCount,
-            firstRetryDelayMs: config.FirstRetryDelayMs))
+            config.RateLimit,
+            config.RateLimitTimeUnitSec,
+            config.RetryCount,
+            config.FirstRetryDelayMs))
         {
         }
 
+        /// <summary>
+        /// Gets the account balance at the specified address.
+        /// </summary>
+        /// <param name="address">The address to check for balance.</param>
+        /// <param name="block">Optional block number, or Latest/Pending/Earliest. Defaults to Latest.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The balance in wei as a BigInteger.</returns>
         public async Task<Result<BigInteger>> GetBalanceAsync(
             string address,
             BlockNumber? block = null,
@@ -49,8 +64,8 @@ namespace Revelium.Evm.Rpc
             };
 
             var (response, error) = await SendAsync<string>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
 
             if (error != null)
                 return error;
@@ -58,6 +73,13 @@ namespace Revelium.Evm.Rpc
             return new HexBigInteger(response).Value;
         }
 
+        /// <summary>
+        /// Gets the number of transactions sent from the specified address.
+        /// </summary>
+        /// <param name="address">The address to check.</param>
+        /// <param name="block">Optional block number, or Latest/Pending/Earliest. Defaults to Latest.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The number of transactions sent from the address.</returns>
         public async Task<Result<BigInteger>> GetTransactionCountAsync(
             string address,
             BlockNumber? block = null,
@@ -76,8 +98,8 @@ namespace Revelium.Evm.Rpc
             };
 
             var (response, error) = await SendAsync<string>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
 
             if (error != null)
                 return error;
@@ -85,6 +107,11 @@ namespace Revelium.Evm.Rpc
             return new HexBigInteger(response).Value;
         }
 
+        /// <summary>
+        /// Gets the current gas price in wei.
+        /// </summary>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The current gas price in wei.</returns>
         public async Task<Result<BigInteger>> GetGasPriceAsync(
             CancellationToken cancellationToken = default)
         {
@@ -97,8 +124,8 @@ namespace Revelium.Evm.Rpc
             };
 
             var (response, error) = await SendAsync<string>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
 
             if (error != null)
                 return error;
@@ -106,6 +133,11 @@ namespace Revelium.Evm.Rpc
             return new HexBigInteger(response).Value;
         }
 
+        /// <summary>
+        /// Gets the current maxPriorityFeePerGas in wei (EIP-1559).
+        /// </summary>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The current maxPriorityFeePerGas in wei.</returns>
         public async Task<Result<BigInteger>> GetMaxPriorityFeePerGasAsync(
             CancellationToken cancellationToken = default)
         {
@@ -118,8 +150,8 @@ namespace Revelium.Evm.Rpc
             };
 
             var (response, error) = await SendAsync<string>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
 
             if (error != null)
                 return error;
@@ -127,6 +159,11 @@ namespace Revelium.Evm.Rpc
             return new HexBigInteger(response).Value;
         }
 
+        /// <summary>
+        /// Gets the latest block number.
+        /// </summary>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The number of the latest block.</returns>
         public async Task<Result<BigInteger>> GetBlockNumberAsync(
             CancellationToken cancellationToken = default)
         {
@@ -139,8 +176,8 @@ namespace Revelium.Evm.Rpc
             };
 
             var (response, error) = await SendAsync<string>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
 
             if (error != null)
                 return error;
@@ -148,6 +185,13 @@ namespace Revelium.Evm.Rpc
             return new HexBigInteger(response).Value;
         }
 
+        /// <summary>
+        /// Gets information about a block by block number.
+        /// </summary>
+        /// <param name="block">Optional block number, or Latest/Pending/Earliest. Defaults to Latest.</param>
+        /// <param name="includeTransactions">If true, returns full transaction objects. If false, only returns transaction hashes.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>Information about the specified block.</returns>
         public async Task<Result<Block>> GetBlockByNumberAsync(
             BlockNumber? block = null,
             bool includeTransactions = true,
@@ -166,8 +210,8 @@ namespace Revelium.Evm.Rpc
             };
 
             var (response, error) = await SendAsync<Block>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
 
             if (error != null)
                 return error;
@@ -175,6 +219,12 @@ namespace Revelium.Evm.Rpc
             return response!;
         }
 
+        /// <summary>
+        /// Sends a signed raw transaction to the network.
+        /// </summary>
+        /// <param name="signedTransactionData">The signed transaction data as a hexadecimal string (without 0x prefix).</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The transaction hash if successful.</returns>
         public async Task<Result<string>> SendRawTransactionAsync(
             string signedTransactionData,
             CancellationToken cancellationToken = default)
@@ -188,8 +238,8 @@ namespace Revelium.Evm.Rpc
             };
 
             var (response, error) = await SendAsync<string>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
 
             if (error != null)
                 return error;
@@ -197,6 +247,12 @@ namespace Revelium.Evm.Rpc
             return response!;
         }
 
+        /// <summary>
+        /// Gets the transaction receipt for a transaction.
+        /// </summary>
+        /// <param name="txId">The transaction hash.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The transaction receipt if the transaction has been mined, null if pending.</returns>
         public async Task<NullableResult<TransactionReceipt>> GetTransactionReceiptAsync(
             string txId,
             CancellationToken cancellationToken = default)
@@ -210,10 +266,20 @@ namespace Revelium.Evm.Rpc
             };
 
             return await SendAsync<TransactionReceipt>(
-                jsonBody: JsonSerializer.Serialize(body),
-                cancellationToken: cancellationToken);
+                JsonSerializer.Serialize(body),
+                cancellationToken);
         }
 
+        /// <summary>
+        /// Gets logs matching the specified filter criteria.
+        /// </summary>
+        /// <param name="fromBlock">Optional start block number.</param>
+        /// <param name="toBlock">Optional end block number.</param>
+        /// <param name="address">Optional contract address to filter by.</param>
+        /// <param name="topics">Optional array of topics to filter by.</param>
+        /// <param name="blockHash">Optional block hash to get logs from a single block.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>A list of matching log entries.</returns>
         public async Task<Result<List<Log>>> GetLogsAsync(
             BlockNumber? fromBlock = null,
             BlockNumber? toBlock = null,
@@ -250,9 +316,7 @@ namespace Revelium.Evm.Rpc
                 $"\"params\":[{@params}]" +
             "}";
 
-            var (response, error) = await SendAsync<List<Log>>(
-                jsonBody: body,
-                cancellationToken: cancellationToken);
+            var (response, error) = await SendAsync<List<Log>>(body, cancellationToken);
 
             if (error != null)
                 return error;
@@ -260,6 +324,20 @@ namespace Revelium.Evm.Rpc
             return response!;
         }
 
+        /// <summary>
+        /// Estimates the gas needed to execute a transaction.
+        /// </summary>
+        /// <param name="to">The recipient address.</param>
+        /// <param name="from">Optional sender address.</param>
+        /// <param name="gas">Optional gas limit.</param>
+        /// <param name="gasPrice">Optional gas price (pre EIP-1559).</param>
+        /// <param name="maxPriorityFeePerGas">Optional maxPriorityFeePerGas (EIP-1559).</param>
+        /// <param name="maxFeePerGas">Optional maxFeePerGas (EIP-1559).</param>
+        /// <param name="value">Optional value in wei to send.</param>
+        /// <param name="data">Optional contract data.</param>
+        /// <param name="block">Optional block number for estimation. Defaults to Latest.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The estimated gas amount.</returns>
         public async Task<Result<BigInteger>> EstimateGasAsync(
             string to,
             string? from = null,
@@ -272,7 +350,7 @@ namespace Revelium.Evm.Rpc
             BlockNumber? block = null,
             CancellationToken cancellationToken = default)
         {
-            var jsonBody = "{" +
+            var body = "{" +
                 $"\"id\": 1," +
                 $"\"jsonrpc\": \"2.0\"," +
                 $"\"method\": \"eth_estimateGas\"," +
@@ -291,9 +369,7 @@ namespace Revelium.Evm.Rpc
                 $"]" +
                 "}";
 
-            var (response, error) = await SendAsync<string>(
-                jsonBody: jsonBody,
-                cancellationToken: cancellationToken);
+            var (response, error) = await SendAsync<string>(body, cancellationToken);
 
             if (error != null)
                 return error;
@@ -301,6 +377,19 @@ namespace Revelium.Evm.Rpc
             return new HexBigInteger(response).Value;
         }
 
+        /// <summary>
+        /// Executes a contract call without creating a transaction.
+        /// </summary>
+        /// <typeparam name="TResult">The expected return type.</typeparam>
+        /// <param name="to">The contract address.</param>
+        /// <param name="from">Optional sender address.</param>
+        /// <param name="gas">Optional gas limit.</param>
+        /// <param name="gasPrice">Optional gas price.</param>
+        /// <param name="value">Optional value in wei to send.</param>
+        /// <param name="input">Optional contract input data.</param>
+        /// <param name="block">Optional block number. Defaults to Latest.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>The result of the contract call.</returns>
         public async Task<NullableResult<TResult>> CallAsync<TResult>(
             string to,
             string? from = null,
@@ -311,7 +400,7 @@ namespace Revelium.Evm.Rpc
             BlockNumber? block = null,
             CancellationToken cancellationToken = default)
         {
-            var jsonBody = "{" +
+            var body = "{" +
                 $"\"id\": 1," +
                 $"\"jsonrpc\": \"2.0\"," +
                 $"\"method\": \"eth_call\"," +
@@ -328,50 +417,36 @@ namespace Revelium.Evm.Rpc
                 $"]" +
                 "}";
 
-            return await SendAsync<TResult>(
-                jsonBody: jsonBody,
-                cancellationToken: cancellationToken);
+            return await SendAsync<TResult>(body, cancellationToken);
         }
 
         private async Task<NullableResult<TResult>> SendAsync<TResult>(
-            string jsonBody,
+            string content,
             CancellationToken cancellationToken = default)
         {
-            var requestContent = new StringContent(
-                content: jsonBody,
-                encoding: Encoding.UTF8,
-                mediaType: "application/json");
-
-            var requestMessage = new HttpRequestMessage
-            {
-                RequestUri = new Uri(Url),
-                Content = requestContent,
-                Method = HttpMethod.Post
-            };
-
-            HttpResponseMessage response;
-
             try
             {
-                response = await _httpClient
+                var requestContent = new StringContent(content, Encoding.UTF8, "application/json");
+
+                using var requestMessage = new HttpRequestMessage
+                {
+                    RequestUri = new Uri(Url),
+                    Content = requestContent,
+                    Method = HttpMethod.Post
+                };
+
+                using var response = await _httpClient
                     .SendAsync(requestMessage, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                return new Error(Errors.HTTP_REQUEST_ERROR, "Http request error", ex);
-            }
 
-            var responseContent = await response.Content
-                .ReadAsStringAsync();
+                var responseContent = await response.Content
+                    .ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                return new Error((int)response.StatusCode, responseContent);
+                if (!response.IsSuccessStatusCode)
+                    return new Error((int)response.StatusCode, responseContent);
 
-            if (responseContent == null)
-                return new Error(Errors.INVALID_RESPONSE, "Response content is null");
+                if (responseContent == null)
+                    return new Error(Errors.INVALID_RESPONSE, "Response content is null");
 
-            try
-            {
                 var rpcResponse = JsonSerializer.Deserialize<Response<TResult>>(responseContent);
 
                 if (rpcResponse == null)
@@ -381,6 +456,14 @@ namespace Revelium.Evm.Rpc
                     return new Error(rpcResponse.Error.Code, rpcResponse.Error.Message);
 
                 return rpcResponse.Result;
+            }
+            catch (HttpRequestException ex)
+            {
+                return new Error(Errors.HTTP_REQUEST_ERROR, "Http request error", ex);
+            }
+            catch (JsonException ex)
+            {
+                return new Error(Errors.INVALID_RESPONSE, "Invalid JSON response", ex);
             }
             catch (Exception ex)
             {

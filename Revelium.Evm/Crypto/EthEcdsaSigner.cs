@@ -19,7 +19,7 @@ namespace Revelium.Evm.Crypto
         public virtual bool Verify(
             byte[] hash,
             byte[] signature) => _key.VerifyAllowingOnlyLowS(
-                hash: hash,
-                sig: EthECDSASignature.FromDER(signature));
+                hash,
+                EthECDSASignature.FromDER(signature));
     }
 }
