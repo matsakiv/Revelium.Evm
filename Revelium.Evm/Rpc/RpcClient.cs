@@ -16,13 +16,14 @@ using System.Threading.Tasks;
 
 namespace Revelium.Evm.Rpc
 {
-    public class RpcClient(string url, HttpClient? httpClient = null)
+    public class RpcClient(string url, long? chainId = null, HttpClient? httpClient = null)
     {
         private readonly HttpClient _httpClient = httpClient ?? new HttpClient();
 
         public string Url { get; } = url;
+        public long? ChainId { get; } = chainId;
 
-        public RpcClient(RpcConfig config) : this(config.Url, CreateHttpClient(
+        public RpcClient(RpcConfig config) : this(config.Url, config.ChainId, CreateHttpClient(
             rateLimit: config.RateLimit,
             rateLimitTimeUnitSec: config.RateLimitTimeUnitSec,
             retryCount: config.RetryCount,

@@ -17,6 +17,7 @@ namespace Revelium.Evm.Common
             string tokenContract,
             string owner,
             string spender,
+            BlockNumber? block = null,
             CancellationToken cancellationToken = default)
         {
             var allowance = new Allowance
@@ -25,10 +26,14 @@ namespace Revelium.Evm.Common
                 Spender = spender
             };
 
+            var input = rpc.ChainId != null
+                ? allowance.CreateTransactionInput(tokenContract, rpc.ChainId.Value).Data
+                : allowance.CreateTransactionInput(tokenContract).Data;
+
             var (hexResult, error) = await rpc.CallAsync<string>(
                 to: tokenContract,
-                input: allowance.CreateTransactionInput(tokenContract).Data,
-                block: BlockNumber.Latest,
+                input: input,
+                block: block,
                 cancellationToken: cancellationToken);
 
             if (error != null)
@@ -41,8 +46,7 @@ namespace Revelium.Evm.Common
             this RpcClient rpc,
             string tokenContract,
             string account,
-            BlockNumber? defaultBlock = null,
-            BigInteger? chainId = null,
+            BlockNumber? block = null,
             CancellationToken cancellationToken = default)
         {
             var balanceOf = new BalanceOf()
@@ -50,10 +54,14 @@ namespace Revelium.Evm.Common
                 Account = account
             };
 
+            var input = rpc.ChainId != null
+                ? balanceOf.CreateTransactionInput(tokenContract, rpc.ChainId.Value).Data
+                : balanceOf.CreateTransactionInput(tokenContract).Data;
+
             var (hexResult, error) = await rpc.CallAsync<string>(
                 to: tokenContract,
-                input: balanceOf.CreateTransactionInput(tokenContract, chainId ?? BigInteger.Zero).Data,
-                block: defaultBlock,
+                input: input,
+                block: block,
                 cancellationToken: cancellationToken);
 
             if (error != null)

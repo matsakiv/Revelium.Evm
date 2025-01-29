@@ -7,5 +7,6 @@
         public int RateLimitTimeUnitSec { get; init; }
         public int RetryCount { get; init; }
         public int FirstRetryDelayMs { get; init; }
+        public long? ChainId { get; init; }
     }
 }
