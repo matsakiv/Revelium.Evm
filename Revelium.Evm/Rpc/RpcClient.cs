@@ -357,11 +357,11 @@ namespace Revelium.Evm.Rpc
                 $"\"params\":[" +
                     $"{{" +
                         (from != null ? $"\"from\": \"{from}\"," : "") +
-                        (gas != null ? $"\"gas\": \"{new HexBigInteger(gas.Value)}\"," : "") +
+                        (gas != null ? $"\"gas\": \"{new HexBigInteger(gas.Value).HexValue}\"," : "") +
                         (gasPrice != null ? $"\"gasPrice\": \"{new HexBigInteger(gasPrice.Value)}\"," : "") +
-                        (maxPriorityFeePerGas != null ? $"\"maxPriorityFeePerGas\": \"{new HexBigInteger(maxPriorityFeePerGas.Value)}\"," : "") +
-                        (maxFeePerGas != null ? $"\"maxFeePerGas\": \"{new HexBigInteger(maxFeePerGas.Value)}\"," : "") +
-                        (value != null ? $"\"value\": \"{new HexBigInteger(value.Value)}\"," : "") +
+                        (maxPriorityFeePerGas != null ? $"\"maxPriorityFeePerGas\": \"{new HexBigInteger(maxPriorityFeePerGas.Value).HexValue}\"," : "") +
+                        (maxFeePerGas != null ? $"\"maxFeePerGas\": \"{new HexBigInteger(maxFeePerGas.Value).HexValue}\"," : "") +
+                        (value != null ? $"\"value\": \"{new HexBigInteger(value.Value).HexValue}\"," : "") +
                         (data != null ? $"\"data\": \"{data}\"," : "") +
                         $"\"to\": \"{to}\"" +
                     $"}}," +
@@ -407,9 +407,9 @@ namespace Revelium.Evm.Rpc
                 $"\"params\":[" +
                     $"{{" +
                         (from != null ? $"\"from\": \"{from}\"," : "") +
-                        (gas != null ? $"\"gas\": \"{new HexBigInteger(gas.Value)}\"," : "") +
-                        (gasPrice != null ? $"\"gasPrice\": \"{new HexBigInteger(gasPrice.Value)}\"," : "") +
-                        (value != null ? $"\"value\": \"{new HexBigInteger(value.Value)}\"," : "") +
+                        (gas != null ? $"\"gas\": \"{new HexBigInteger(gas.Value).HexValue}\"," : "") +
+                        (gasPrice != null ? $"\"gasPrice\": \"{new HexBigInteger(gasPrice.Value).HexValue}\"," : "") +
+                        (value != null ? $"\"value\": \"{new HexBigInteger(value.Value).HexValue}\"," : "") +
                         (input != null ? $"\"input\": \"{input}\"," : "") +
                         $"\"to\": \"{to}\"" +
                     $"}}," +
