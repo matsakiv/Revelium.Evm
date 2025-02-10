@@ -19,6 +19,7 @@ namespace Revelium.Evm.Rpc
 
         public event EventHandler<TransactionReceipt>? ReceiptReceived;
         public event EventHandler<ErrorEventArgs>? ErrorReceived;
+        public event EventHandler<ErrorEventArgs>? TimeOutReached;
         public event EventHandler<ErrorEventArgs>? Canceled;
 
         private readonly RpcClient _rpc = rpc ?? throw new ArgumentNullException(nameof(rpc));
@@ -40,7 +41,9 @@ namespace Revelium.Evm.Rpc
                     {
                         if (timeOut != null && DateTimeOffset.UtcNow >= startTimeStamp + timeOut)
                         {
-                            Canceled?.Invoke(this, new ErrorEventArgs
+                            _logger?.LogWarning("Timeout reached for txId {@txId}", txId);
+
+                            TimeOutReached?.Invoke(this, new ErrorEventArgs
                             {
                                 TxId = txId,
                                 Error = new Error(TIMEOUT_REACHED_ERROR, "Timeout reached")

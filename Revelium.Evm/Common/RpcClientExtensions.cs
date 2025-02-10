@@ -1,4 +1,5 @@
 ﻿using Incendium;
+using Microsoft.Extensions.Logging;
 using Revelium.Evm.Crypto.Abstract;
 using Revelium.Evm.Rpc;
 using Revelium.Evm.Rpc.Parameters;
@@ -30,6 +31,7 @@ namespace Revelium.Evm.Common
             bool estimateGas = true,
             uint? estimateGasReserveInPercent = 0,
             string? networkId = null,
+            ILogger? logger = null,
             CancellationToken cancellationToken = default)
         {
             var nonceManager = NonceManager.GetOrAddInstance(tx.From, networkId);
@@ -37,13 +39,15 @@ namespace Revelium.Evm.Common
             var (nonce, nonceError) = await nonceManager.GetNonceAsync(
                 rpc,
                 pending: true,
-                logger: null,
+                logger: logger,
                 cancellationToken);
 
             if (nonceError != null)
                 return nonceError;
 
             tx.Nonce = nonce;
+
+            logger?.LogDebug("Transaction nonce is {@nonce}", nonce);
 
             if (estimateGas)
             {
