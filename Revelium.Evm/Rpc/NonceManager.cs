@@ -9,6 +9,31 @@ using System.Threading.Tasks;
 
 namespace Revelium.Evm.Rpc
 {
+    public class NonceLock(BigInteger nonce, SemaphoreSlim sync) : IDisposable
+    {
+        private readonly SemaphoreSlim _sync = sync;
+        private bool _isDisposed;
+
+        public BigInteger Nonce { get; } = nonce;
+
+        private void Dispose(bool disposing)
+        {
+            if (_isDisposed)
+                return;
+
+            if (disposing)
+                _sync.Release();
+
+            _isDisposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+    }
+
     public class NonceManager
     {
         private class NonceEntry
@@ -18,7 +43,7 @@ namespace Revelium.Evm.Rpc
         }
 
         private const int NONCE_FORCE_UPDATE_INTERVAL_SEC = 3 * 60;
-        private const int NONCE_VALID_PERIOD_SEC = 60;
+        private const int OFFLINE_NONCE_VALID_PERIOD_SEC = 60;
 
         private NonceEntry? _offlineNonceEntry;
         private NonceEntry? _networkNonceEntry;
@@ -50,30 +75,33 @@ namespace Revelium.Evm.Rpc
             return instances.GetOrAdd($"{networkId ?? ""}:{address}", id => new NonceManager(address, networkId));
         }
 
-        public async Task<Result<BigInteger>> GetNonceAsync(
+        public async Task<Result<NonceLock>> GetNonceAsync(
             RpcClient rpc,
             bool pending = true,
             ILogger? logger = null,
             CancellationToken cancellationToken = default)
         {
-            var (transactionCount, error) = await rpc
-                .GetTransactionCountAsync(
-                    Address,
-                    pending ? BlockNumber.Pending : BlockNumber.Latest,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-            if (error != null)
-                return error;
-
-            var nonceTimeStamp = DateTimeOffset.UtcNow;
-            var nonce = transactionCount;
-
-            logger?.LogDebug("Network nonce is {@nonce}", nonce.ToString());
-
             try
             {
                 await _sync.WaitAsync(cancellationToken);
+
+                var (transactionCount, error) = await rpc
+                    .GetTransactionCountAsync(
+                        Address,
+                        pending ? BlockNumber.Pending : BlockNumber.Latest,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (error != null)
+                {
+                    _sync.Release();
+                    return error;
+                }
+
+                var currentTimeStamp = DateTimeOffset.UtcNow;
+                var nonce = transactionCount;
+
+                logger?.LogDebug("Network nonce is {@nonce}", nonce.ToString());
 
                 if (_networkNonceEntry != null && _networkNonceEntry.Nonce > nonce)
                 {
@@ -85,23 +113,26 @@ namespace Revelium.Evm.Rpc
 
                 if (_networkNonceEntry == null ||
                     _networkNonceEntry.Nonce != nonce ||
-                    nonceTimeStamp - _networkNonceEntry.LastUpdated >= TimeSpan.FromSeconds(NONCE_FORCE_UPDATE_INTERVAL_SEC))
+                    (currentTimeStamp - _networkNonceEntry.LastUpdated >=
+                    TimeSpan.FromSeconds(NONCE_FORCE_UPDATE_INTERVAL_SEC)))
                 {
                     _networkNonceEntry = new NonceEntry
                     {
                         Nonce = nonce,
-                        LastUpdated = nonceTimeStamp
+                        LastUpdated = currentTimeStamp
                     };
                 }
 
                 var currentNonce = _offlineNonceEntry != null &&
                     _offlineNonceEntry.Nonce > _networkNonceEntry.Nonce &&
-                    _offlineNonceEntry.LastUpdated - _networkNonceEntry.LastUpdated < TimeSpan.FromSeconds(NONCE_VALID_PERIOD_SEC)
+                    (_offlineNonceEntry.LastUpdated - _networkNonceEntry.LastUpdated <
+                    TimeSpan.FromSeconds(OFFLINE_NONCE_VALID_PERIOD_SEC))
                         ? _offlineNonceEntry.Nonce
                         : nonce;
 
                 if (_offlineNonceEntry != null &&
-                    _offlineNonceEntry.LastUpdated - _networkNonceEntry.LastUpdated >= TimeSpan.FromSeconds(NONCE_VALID_PERIOD_SEC))
+                    (_offlineNonceEntry.LastUpdated - _networkNonceEntry.LastUpdated >=
+                    TimeSpan.FromSeconds(OFFLINE_NONCE_VALID_PERIOD_SEC)))
                 {
                     logger?.LogWarning(
                         "Network nonce lags behind offline nonce by more than {@seconds} seconds",
@@ -114,56 +145,22 @@ namespace Revelium.Evm.Rpc
                     LastUpdated = DateTimeOffset.UtcNow
                 };
 
-                return currentNonce;
+                return new NonceLock(currentNonce, _sync);
             }
-            finally
+            catch (Exception ex)
             {
                 _sync.Release();
+                return new Error("GetNonceAsync error", ex);
             }
         }
 
-        public async Task<Result<bool>> ForceResetAsync(
-            RpcClient rpc,
-            bool pending = true,
-            ILogger? logger = null,
-            CancellationToken cancellationToken = default)
+        public void Reset(BigInteger nonce, ILogger? logger = null)
         {
-            var (transactionCount, error) = await rpc
-                .GetTransactionCountAsync(
-                    Address,
-                    pending ? BlockNumber.Pending : BlockNumber.Latest,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-            if (error != null)
-                return error;
-
-            var nonceTimeStamp = DateTimeOffset.UtcNow;
-            var nonce = transactionCount;
-
-            logger?.LogDebug("Network nonce is {@nonce}", nonce.ToString());
-
-            try
+            if (_offlineNonceEntry != null)
             {
-                await _sync.WaitAsync(cancellationToken);
+                logger?.LogDebug("Reset nonce to {@nonce}", nonce.ToString());
 
-                _networkNonceEntry = new NonceEntry
-                {
-                    Nonce = nonce,
-                    LastUpdated = nonceTimeStamp
-                };
-
-                _offlineNonceEntry = new NonceEntry
-                {
-                    Nonce = nonce,
-                    LastUpdated = nonceTimeStamp
-                };
-
-                return true;
-            }
-            finally
-            {
-                _sync.Release();
+                _offlineNonceEntry.Nonce = nonce;
             }
         }
     }

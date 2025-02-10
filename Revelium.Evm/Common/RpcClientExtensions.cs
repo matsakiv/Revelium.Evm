@@ -36,7 +36,7 @@ namespace Revelium.Evm.Common
         {
             var nonceManager = NonceManager.GetOrAddInstance(tx.From, networkId);
 
-            var (nonce, nonceError) = await nonceManager.GetNonceAsync(
+            var (nonceLock, nonceError) = await nonceManager.GetNonceAsync(
                 rpc,
                 pending: true,
                 logger: logger,
@@ -45,34 +45,55 @@ namespace Revelium.Evm.Common
             if (nonceError != null)
                 return nonceError;
 
-            tx.Nonce = nonce;
-
-            logger?.LogDebug("Transaction nonce is {@nonce}", nonce.ToString());
-
-            if (estimateGas)
+            try
             {
-                var (estimatedGas, estimateGasError) = tx switch
+                tx.Nonce = nonceLock.Nonce;
+
+                logger?.LogDebug("Transaction nonce is {@nonce}", tx.Nonce.ToString());
+
+                if (estimateGas)
                 {
-                    Transaction1559Request eip1559Tx => await rpc.EstimateGasAsync(eip1559Tx),
-                    TransactionLegacyRequest legacyTx => await rpc.EstimateGasAsync(legacyTx),
-                    _ => throw new NotImplementedException(),
-                };
+                    var (estimatedGas, estimateGasError) = tx switch
+                    {
+                        Transaction1559Request eip1559Tx => await rpc.EstimateGasAsync(eip1559Tx),
+                        TransactionLegacyRequest legacyTx => await rpc.EstimateGasAsync(legacyTx),
+                        _ => throw new NotImplementedException(),
+                    };
 
-                if (estimateGasError != null)
-                    return estimateGasError;
+                    if (estimateGasError != null)
+                    {
+                        nonceManager.Reset(tx.Nonce, logger);
+                        return estimateGasError;
+                    }
 
-                tx.GasLimit = estimatedGas;
+                    tx.GasLimit = estimatedGas;
 
-                if (estimateGasReserveInPercent != null && estimateGasReserveInPercent >= 0)
-                    tx.GasLimit += tx.GasLimit / 100 * estimateGasReserveInPercent.Value;
+                    if (estimateGasReserveInPercent != null && estimateGasReserveInPercent >= 0)
+                        tx.GasLimit += tx.GasLimit / 100 * estimateGasReserveInPercent.Value;
+                }
+
+                signer.Sign(tx);
+
+                if (!tx.Verify())
+                {
+                    nonceManager.Reset(tx.Nonce, logger);
+                    return new Error(Errors.TX_VERIFY_ERROR, "Can't verify transaction");
+                }
+
+                var (txId, txSendError) = await rpc.SendTransactionAsync(tx, cancellationToken);
+
+                if (txSendError != null)
+                {
+                    nonceManager.Reset(tx.Nonce, logger);
+                    return new Error(Errors.TX_SEND_ERROR, "Transaction sending error");
+                }
+
+                return txId;
             }
-
-            signer.Sign(tx);
-
-            if (!tx.Verify())
-                return new Error(Errors.TX_VERIFY_ERROR, "Can't verify transaction");
-
-            return await rpc.SendTransactionAsync(tx, cancellationToken);
+            finally
+            {
+                nonceLock?.Dispose();
+            }
         }
 
         public static Task<Result<BigInteger>> EstimateGasAsync(
