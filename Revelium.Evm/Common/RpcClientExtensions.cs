@@ -47,7 +47,7 @@ namespace Revelium.Evm.Common
 
             tx.Nonce = nonce;
 
-            logger?.LogDebug("Transaction nonce is {@nonce}", nonce);
+            logger?.LogDebug("Transaction nonce is {@nonce}", nonce.ToString());
 
             if (estimateGas)
             {
