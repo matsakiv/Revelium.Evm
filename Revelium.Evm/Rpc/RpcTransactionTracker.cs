@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace Revelium.Evm.Rpc
 {
+    /// <summary>
+    /// A transaction tracker for RPC transactions.
+    /// </summary>
     public class RpcTransactionTracker(
         RpcClient rpc,
         ILogger<RpcTransactionTracker>? logger = null) : IRpcTransactionTracker
@@ -25,6 +28,13 @@ namespace Revelium.Evm.Rpc
         private readonly RpcClient _rpc = rpc ?? throw new ArgumentNullException(nameof(rpc));
         private readonly ILogger<RpcTransactionTracker>? _logger = logger;
 
+        /// <summary>
+        /// Tracks a transaction.
+        /// </summary>
+        /// <param name="txId">The transaction ID.</param>
+        /// <param name="updateInterval">The update interval.</param>
+        /// <param name="timeOut">The timeout.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
         public Task TrackTransactionAsync(
             string txId,
             TimeSpan updateInterval,
@@ -98,7 +108,6 @@ namespace Revelium.Evm.Rpc
                         Error = new Error(TRACKING_ERROR, "Transaction tracker error", e)
                     });
                 }
-
             }, cancellationToken);
         }
     }

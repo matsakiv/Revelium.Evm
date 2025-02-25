@@ -13,6 +13,9 @@ namespace Revelium.Evm.Rpc
         public uint? EstimateGasReserveInPercent { get; init; }
     }
 
+    /// <summary>
+    /// A call sequencer for RPC calls.
+    /// </summary>
     public class RpcCallSequencer(
         RpcClient rpc,
         ISigner signer,
@@ -25,6 +28,14 @@ namespace Revelium.Evm.Rpc
         public string? NetworkId { get; } = networkId;
         public string Address { get; } = signer.GetAddress();
 
+        /// <summary>
+        /// Gets or adds an instance of the call sequencer.
+        /// </summary>
+        /// <param name="rpc">The RPC client.</param>
+        /// <param name="signer">The signer.</param>
+        /// <param name="capacity">The capacity of the call sequencer.</param>
+        /// <param name="networkId">The network ID.</param>
+        /// <returns>The call sequencer.</returns>
         public static RpcCallSequencer GetOrAddInstance(
             RpcClient rpc,
             ISigner signer,

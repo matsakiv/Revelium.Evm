@@ -9,31 +9,9 @@ using System.Threading.Tasks;
 
 namespace Revelium.Evm.Rpc
 {
-    public class NonceLock(BigInteger nonce, SemaphoreSlim sync) : IDisposable
-    {
-        private readonly SemaphoreSlim _sync = sync;
-        private bool _isDisposed;
-
-        public BigInteger Nonce { get; } = nonce;
-
-        private void Dispose(bool disposing)
-        {
-            if (_isDisposed)
-                return;
-
-            if (disposing)
-                _sync.Release();
-
-            _isDisposed = true;
-        }
-
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-    }
-
+    /// <summary>
+    /// Manages the nonce for an address.
+    /// </summary>
     public class NonceManager
     {
         private class NonceEntry
@@ -42,12 +20,81 @@ namespace Revelium.Evm.Rpc
             public BigInteger Nonce { get; set; }
         }
 
+        /// <summary>
+        /// A lock for the nonce manager.
+        /// </summary>
+        public class NonceLock : IDisposable
+        {
+            private readonly NonceManager _nonceManager;
+            private bool _isDisposed;
+
+            private NonceLock(NonceManager nonceManager)
+            {
+                _nonceManager = nonceManager;
+            }
+
+            /// <summary>
+            /// Locks the nonce manager.
+            /// </summary>
+            public static async Task<NonceLock> LockAsync(
+                NonceManager nonceManager,
+                CancellationToken cancellationToken = default)
+            {
+                await nonceManager.Sync.WaitAsync(cancellationToken);
+                return new NonceLock(nonceManager);
+            }
+
+            /// <summary>
+            /// Gets the nonce for the address.
+            /// </summary>
+            /// <param name="rpc">The RPC client.</param>
+            /// <param name="pending">Whether to use the pending block.</param>
+            /// <param name="logger">The logger.</param>
+            /// <param name="cancellationToken">The cancellation token.</param>
+            /// <returns>The nonce for the address.</returns>
+            public async Task<Result<BigInteger>> GetNonceAsync(
+                RpcClient rpc,
+                bool pending = true,
+                ILogger? logger = null,
+                CancellationToken cancellationToken = default)
+            {
+                return await _nonceManager.GetNonceAsync(rpc, pending, logger, cancellationToken);
+            }
+
+            /// <summary>
+            /// Resets the nonce for the address.
+            /// </summary>
+            /// <param name="nonce">The nonce to reset to.</param>
+            /// <param name="logger">The logger.</param>
+            public void Reset(BigInteger nonce, ILogger? logger = null)
+            {
+                _nonceManager.Reset(nonce, logger);
+            }
+
+            private void Dispose(bool disposing)
+            {
+                if (_isDisposed)
+                    return;
+
+                if (disposing)
+                    _nonceManager.Sync.Release();
+
+                _isDisposed = true;
+            }
+
+            public void Dispose()
+            {
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
+            }
+        }
+
         private const int NONCE_FORCE_UPDATE_INTERVAL_SEC = 3 * 60;
         private const int OFFLINE_NONCE_VALID_PERIOD_SEC = 60;
 
         private NonceEntry? _offlineNonceEntry;
         private NonceEntry? _networkNonceEntry;
-        private readonly SemaphoreSlim _sync;
+        private readonly SemaphoreSlim Sync;
 
         public string? NetworkId { get; }
         public string Address { get; }
@@ -57,11 +104,17 @@ namespace Revelium.Evm.Rpc
             Address = address;
             NetworkId = networkId;
 
-            _sync = new SemaphoreSlim(initialCount: 1);
+            Sync = new SemaphoreSlim(initialCount: 1);
         }
 
         private static ConcurrentDictionary<string, NonceManager>? _instances;
 
+        /// <summary>
+        /// Gets or adds an instance of the nonce manager.
+        /// </summary>
+        /// <param name="address">The address.</param>
+        /// <param name="networkId">The network ID.</param>
+        /// <returns>The nonce manager.</returns>
         public static NonceManager GetOrAddInstance(string address, string? networkId = null)
         {
             var instances = _instances;
@@ -75,7 +128,33 @@ namespace Revelium.Evm.Rpc
             return instances.GetOrAdd($"{networkId ?? ""}:{address}", id => new NonceManager(address, networkId));
         }
 
-        public async Task<Result<NonceLock>> GetNonceAsync(
+        /// <summary>
+        /// Locks the nonce manager.
+        /// </summary>
+        /// <param name="address">The address.</param>
+        /// <param name="networkId">The network ID.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The nonce lock.</returns>
+        public static Task<NonceLock> LockAsync(
+            string address,
+            string? networkId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var instance = GetOrAddInstance(address, networkId);
+            return NonceLock.LockAsync(instance, cancellationToken);
+        }
+
+        /// <summary>
+        /// Locks the nonce manager.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The nonce lock.</returns>
+        public async Task<NonceLock> LockAsync(CancellationToken cancellationToken = default)
+        {
+            return await NonceLock.LockAsync(this, cancellationToken);
+        }
+
+        private async Task<Result<BigInteger>> GetNonceAsync(
             RpcClient rpc,
             bool pending = true,
             ILogger? logger = null,
@@ -83,8 +162,6 @@ namespace Revelium.Evm.Rpc
         {
             try
             {
-                await _sync.WaitAsync(cancellationToken);
-
                 var (transactionCount, error) = await rpc
                     .GetTransactionCountAsync(
                         Address,
@@ -93,10 +170,7 @@ namespace Revelium.Evm.Rpc
                     .ConfigureAwait(false);
 
                 if (error != null)
-                {
-                    _sync.Release();
                     return error;
-                }
 
                 var currentTimeStamp = DateTimeOffset.UtcNow;
                 var nonce = transactionCount;
@@ -145,23 +219,21 @@ namespace Revelium.Evm.Rpc
                     LastUpdated = DateTimeOffset.UtcNow
                 };
 
-                return new NonceLock(currentNonce, _sync);
+                return currentNonce;
             }
             catch (Exception ex)
             {
-                _sync.Release();
                 return new Error("GetNonceAsync error", ex);
             }
         }
 
-        public void Reset(BigInteger nonce, ILogger? logger = null)
+        private void Reset(BigInteger nonce, ILogger? logger = null)
         {
-            if (_offlineNonceEntry != null)
-            {
-                logger?.LogDebug("Reset nonce to {@nonce}", nonce.ToString());
+            if (_offlineNonceEntry == null)
+                return;
 
-                _offlineNonceEntry.Nonce = nonce;
-            }
+            _offlineNonceEntry.Nonce = nonce;
+            logger?.LogDebug("Reset nonce to {@nonce}", nonce.ToString());
         }
     }
 }
