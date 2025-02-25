@@ -22,6 +22,8 @@ namespace Revelium.Evm.BlockScout
 
     public class BlockScoutApi(string url, HttpClient? httpClient = null)
     {
+        public const int HTTP_REQUEST_ERROR = 1;
+        public const int INVALID_RESPONSE = 2;
         public const string ETHERLINK = "https://explorer.etherlink.com/";
         public const string ETHERLINK_TESTNET = "https://testnet.explorer.etherlink.com/";
 
@@ -87,7 +89,7 @@ namespace Revelium.Evm.BlockScout
                     return error;
 
                 if (response == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Transfers response is null");
+                    return new Error(INVALID_RESPONSE, "Transfers response is null");
 
                 var requiredCount = Math.Min(response.Items.Count, limit);
                 limit -= requiredCount;
@@ -137,7 +139,7 @@ namespace Revelium.Evm.BlockScout
                     return error;
 
                 if (response == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Holders response is null");
+                    return new Error(INVALID_RESPONSE, "Holders response is null");
 
                 var requiredCount = Math.Min(response.Items.Count, limit);
                 limit -= requiredCount;
@@ -210,7 +212,7 @@ namespace Revelium.Evm.BlockScout
                     return error;
 
                 if (response == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Transfers response is null");
+                    return new Error(INVALID_RESPONSE, "Transfers response is null");
 
                 var requiredCount = Math.Min(response.Items.Count, limit);
                 limit -= requiredCount;
@@ -273,7 +275,7 @@ namespace Revelium.Evm.BlockScout
                     return error;
 
                 if (response == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Transactions response is null");
+                    return new Error(INVALID_RESPONSE, "Transactions response is null");
 
                 var requiredCount = Math.Min(response.Items.Count, limit);
 
@@ -334,7 +336,7 @@ namespace Revelium.Evm.BlockScout
                     return error;
 
                 if (response == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Logs response is null");
+                    return new Error(INVALID_RESPONSE, "Logs response is null");
 
                 var requiredCount = Math.Min(response.Items.Count, limit);
                 limit -= requiredCount;
@@ -410,7 +412,7 @@ namespace Revelium.Evm.BlockScout
                     return error;
 
                 if (response == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Transfers response is null");
+                    return new Error(INVALID_RESPONSE, "Transfers response is null");
 
                 var requiredCount = Math.Min(response.Items.Count, limit);
                 limit -= requiredCount;
@@ -460,7 +462,7 @@ namespace Revelium.Evm.BlockScout
                     return error;
 
                 if (response == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Logs response is null");
+                    return new Error(INVALID_RESPONSE, "Logs response is null");
 
                 var requiredCount = Math.Min(response.Items.Count, limit);
                 limit -= requiredCount;
@@ -482,50 +484,45 @@ namespace Revelium.Evm.BlockScout
             HttpMethod method,
             CancellationToken cancellationToken = default)
         {
-            var requestContent = content != null
-                ? new StringContent(content, Encoding.UTF8, "application/json")
-                : null;
-
-            var requestMessage = new HttpRequestMessage
-            {
-                RequestUri = new Uri(Url.Combine(_baseUrl, requestUrl)),
-                Content = requestContent,
-                Method = method
-            };
-
-            HttpResponseMessage response;
-
             try
             {
-                response = await _httpClient
+                var requestContent = content != null
+                    ? new StringContent(content, Encoding.UTF8, "application/json")
+                    : null;
+
+                var requestMessage = new HttpRequestMessage
+                {
+                    RequestUri = new Uri(Url.Combine(_baseUrl, requestUrl)),
+                    Content = requestContent,
+                    Method = method
+                };
+
+                var response = await _httpClient
                     .SendAsync(requestMessage, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                return new Error(Errors.HTTP_REQUEST_ERROR, "Http request error", ex);
-            }
 
-            var responseContent = await response.Content
-                .ReadAsStringAsync();
+                var responseContent = await response.Content
+                    .ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                return new Error((int)response.StatusCode, responseContent);
+                if (!response.IsSuccessStatusCode)
+                    return new Error((int)response.StatusCode, responseContent);
 
-            if (responseContent == null)
-                return new Error(Errors.INVALID_RESPONSE, "Response content is null");
+                if (responseContent == null)
+                    return new Error(INVALID_RESPONSE, "Response content is null");
 
-            try
-            {
                 var result = JsonSerializer.Deserialize<TResult>(responseContent);
 
                 if (result == null)
-                    return new Error(Errors.INVALID_RESPONSE, "Result is null after deserialization");
+                    return new Error(INVALID_RESPONSE, "Result is null after deserialization");
 
                 return result;
             }
+            catch (HttpRequestException ex)
+            {
+                return new Error(HTTP_REQUEST_ERROR, "Http request error", ex);
+            }
             catch (Exception ex)
             {
-                return new Error(Errors.INVALID_RESPONSE, "Invalid response", ex);
+                return new Error(INVALID_RESPONSE, "Invalid response", ex);
             }
         }
     }

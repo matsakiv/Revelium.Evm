@@ -6,7 +6,7 @@ Revelium.Evm is .NET standard 2.1 integration library for EVM-compatible network
 In addition to the basic capabilities of creating, signing and sending EVM transactions (including EIP-1559), the library also contains:
 - `NonceManager` to effective offline Nonce management and send transactions without waiting for confirmations;
 - `RpcCallSequencer` to manage the queue of sent transactions. If the Rpc has a limit on the number of transactions from one address, the class allows you to not exceed the limits, streamline sending, and allows you to cancel queued calls that have not yet been sent to the Rpc;
-- `RpcClient` with built-in support for limiting the number of requests per unit of time and requests retries in case of errors with support for various strategies;
+- `RpcClient` with built-in support for rpc calls batching, limiting the number of requests per unit of time and requests retries in case of errors with support for various strategies;
 - `BlockScoutApi` for BlockScout explorer.
 
 ## Getting started
@@ -56,14 +56,13 @@ var api = new BlockScoutApi(BlockScoutApi.ETHERLINK_TESTNET);
 var tx = await api.GetTransactionAsync(txId);
 ```
 
-
 ### Create, sign and send transaction (long detailed way)
 
 Let's look at a more detailed and low-level transaction creation:
 
 First of all, we need a transaction counter for the nonce. To do this, we will use the nonce manager, which allows you to send transactions without waiting for confirmation of previous ones:
 ```cs
-var (nonce, nonceError) = await NonceManager
+var (nonceLock, nonceError) = await NonceManager
     .GetOrAddInstance(fromAddress)
     .GetNonceAsync(
         rpc: rpc,
@@ -79,7 +78,7 @@ var approve = new Approve
     FromAddress = fromAddress,
     GasPrice = 100_000_000,
     Gas = 1_000_000,
-    Nonce = nonce,
+    Nonce = nonceLock.Nonce,
     Spender = "<SPENDER_ADDRESS>",
     Value = 1_000_000_000_000
 
@@ -109,4 +108,13 @@ signer.Sign(request);
 if (!request.Verify()) { /* do something if necessary */ }
 
 var (txId, error) = await rpc.SendRawTransactionAsync(request);
+```
+
+Finally we need to dispose the nonce lock, or reset nonce in case of error:
+```cs
+if (error != null) {
+    nonceLock.Reset();
+}
+
+nonceLock.Dispose();
 ```

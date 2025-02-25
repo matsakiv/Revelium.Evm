@@ -15,6 +15,8 @@ namespace Revelium.Evm.Rpc.Models
         public string GasLimit { get; init; } = default!;
         [JsonPropertyName("gasUsed")]
         public string GasUsed { get; init; } = default!;
+        [JsonPropertyName("baseFeePerGas")]
+        public string BaseFeePerGas { get; init; } = default!;
         [JsonPropertyName("timestamp")]
         public string TimeStamp { get; init; } = default!;
         [JsonPropertyName("transactions")]
