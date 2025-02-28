@@ -31,16 +31,18 @@ var rpc = new RpcClient(url: RpcUrl.ETHERLINK_GHOSTNET);
 
 Now we are ready to create and send the transaction:
 ```cs
+var approve = new Approve
+{
+    Spender = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+    Value = 1000000000000
+};
+
 var tx = new TransactionLegacyRequest
 {
     From = fromAddress,
-    To = "<TOKEN_CONTRACT_ADDRESS>",
-    GasPrice = 100_000_000,
-    Data = new Approve
-    {
-        Spender = "<SPENDER_ADDRESS>",
-        Value = 1_000_000_000_000
-    }.CreateTransactionInput("<TOKEN_CONTRACT_ADDRESS>").Data
+    To = "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    GasPrice = 100000000,
+    Data = approve.CreateTransactionInput("0xdac17f958d2ee523a2206206994597c13d831ec7").Data
 };
 
 var (txId, error) = await rpc.SignAndSendLegacyTransactionAsync(
@@ -76,14 +78,14 @@ Let's create an Approve transaction for the ERC-20 token:
 var approve = new Approve
 {
     FromAddress = fromAddress,
-    GasPrice = 100_000_000,
-    Gas = 1_000_000,
+    GasPrice = 100000000,
+    Gas = 1000000,
     Nonce = nonceLock.Nonce,
-    Spender = "<SPENDER_ADDRESS>",
-    Value = 1_000_000_000_000
+    Spender = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+    Value = 1000000000000
 };
 
-var approveInput = approve.CreateTransactionInput("<TOKEN_CONTRACT_ADDRESS>").Data;
+var approveInput = approve.CreateTransactionInput("0xdac17f958d2ee523a2206206994597c13d831ec7").Data;
 ```
 
 We can also estimate gas usage:
@@ -124,10 +126,10 @@ if (error != null)
 
 Let's create a batch of requests:
 ```cs
-var (batchResult, error) = await _rpc.SendBatchAsync<BigInteger, Block, BigInteger>(
-    _rpc.CreateBalanceRequest(ADDRESS) with { Id = 1 },
-    _rpc.CreateBlockByNumberRequest() with { Id = 2 },
-    _rpc.CreateMaxPriorityFeePerGasRequest() with { Id = 3 });
+var (batchResult, error) = await rpc.SendBatchAsync<BigInteger, Block, BigInteger>(
+    rpc.CreateBalanceRequest(ADDRESS) with { Id = 1 },
+    rpc.CreateBlockByNumberRequest() with { Id = 2 },
+    rpc.CreateMaxPriorityFeePerGasRequest() with { Id = 3 });
 
 // use destructuring to get the results
 var ((balance, balanceError), (block, blockError), (fee, feeError)) = batchResult;

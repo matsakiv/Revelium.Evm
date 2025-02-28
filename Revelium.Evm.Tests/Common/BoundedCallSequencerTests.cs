@@ -4,6 +4,11 @@ namespace Revelium.Evm.Common
 {
     public class BoundedCallSequencerTests
     {
+        private const string CALL_ID_1 = "id_1";
+        private const string CALL_ID_2 = "id_2";
+        private const string CALL_ID_3 = "id_3";
+        private const string CALL_ID_4 = "id_4";
+
         [Fact]
         public async Task Test_BoundedCallSequencer_Complete()
         {
@@ -19,10 +24,10 @@ namespace Revelium.Evm.Common
                 },
                 capacity: capacity);
 
-            var callId1 = await sequencer.EnqueueAsync(1);
-            var callId2 = await sequencer.EnqueueAsync(2);
-            var callId3 = await sequencer.EnqueueAsync(3);
-            var callId4 = await sequencer.EnqueueAsync(4);
+            await sequencer.EnqueueAsync(CALL_ID_1, 1);
+            await sequencer.EnqueueAsync(CALL_ID_2, 2);
+            await sequencer.EnqueueAsync(CALL_ID_3, 3);
+            await sequencer.EnqueueAsync(CALL_ID_4, 4);
 
             while (sequencer.PendingQueueSize != 1)
                 await Task.Delay(1);
@@ -33,15 +38,15 @@ namespace Revelium.Evm.Common
             var pendingQueueSize = sequencer.PendingQueueSize;
             var waitingQueueSize = sequencer.WaitingQueueSize;
 
-            var completeResult1 = await sequencer.CompleteAsync(callId1);
+            var completeResult1 = await sequencer.CompleteAsync(CALL_ID_1);
 
             while (sequencer.WaitingQueueSize != 3)
                 await Task.Delay(1);
 
             // act
-            var completeResult4 = await sequencer.CompleteAsync(callId4);
-            var completeResult3 = await sequencer.CompleteAsync(callId3);
-            var completeResult2 = await sequencer.CompleteAsync(callId2);
+            var completeResult4 = await sequencer.CompleteAsync(CALL_ID_4);
+            var completeResult3 = await sequencer.CompleteAsync(CALL_ID_3);
+            var completeResult2 = await sequencer.CompleteAsync(CALL_ID_2);
 
             // asserts
             Assert.Equal(1, pendingQueueSize);
@@ -68,7 +73,7 @@ namespace Revelium.Evm.Common
                 handlerCallback: (p, c) => Task.FromResult<Result<int>>(p),
                 capacity: capacity);
 
-            var callId1 = await sequencer.EnqueueAsync(1);
+            await sequencer.EnqueueAsync(CALL_ID_1, 1);
 
             while (sequencer.PendingQueueSize > 0)
                 await Task.Delay(1);
@@ -77,8 +82,8 @@ namespace Revelium.Evm.Common
                 await Task.Delay(1);
 
             // act
-            var completeResult1 = await sequencer.CompleteAsync(callId1);
-            var completeResult2 = await sequencer.CompleteAsync(callId1);
+            var completeResult1 = await sequencer.CompleteAsync(CALL_ID_1);
+            var completeResult2 = await sequencer.CompleteAsync(CALL_ID_1);
 
             // asserts
             Assert.True(completeResult1);
@@ -95,10 +100,10 @@ namespace Revelium.Evm.Common
                 handlerCallback: (p, c) => Task.FromResult<Result<int>>(p),
                 capacity: capacity);
 
-            var callId1 = await sequencer.EnqueueAsync(1);
-            var callId2 = await sequencer.EnqueueAsync(2);
-            var callId3 = await sequencer.EnqueueAsync(3);
-            var callId4 = await sequencer.EnqueueAsync(4);
+            await sequencer.EnqueueAsync(CALL_ID_1, 1);
+            await sequencer.EnqueueAsync(CALL_ID_2, 2);
+            await sequencer.EnqueueAsync(CALL_ID_3, 3);
+            await sequencer.EnqueueAsync(CALL_ID_4, 4);
 
             while (sequencer.PendingQueueSize != 2)
                 await Task.Delay(1);
@@ -107,10 +112,10 @@ namespace Revelium.Evm.Common
                 await Task.Delay(1);
 
             // act
-            var cancelResult1 = await sequencer.TryCancelAsync(callId1);
-            var cancelResult2 = await sequencer.TryCancelAsync(callId2);
-            var cancelResult3 = await sequencer.TryCancelAsync(callId3);
-            var cancelResult4 = await sequencer.TryCancelAsync(callId4);
+            var cancelResult1 = await sequencer.TryCancelAsync(CALL_ID_1);
+            var cancelResult2 = await sequencer.TryCancelAsync(CALL_ID_2);
+            var cancelResult3 = await sequencer.TryCancelAsync(CALL_ID_3);
+            var cancelResult4 = await sequencer.TryCancelAsync(CALL_ID_4);
 
             // asserts
             Assert.False(cancelResult1);

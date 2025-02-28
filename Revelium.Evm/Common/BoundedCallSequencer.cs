@@ -38,13 +38,13 @@ namespace Revelium.Evm.Common
         public int WaitingQueueSize => _waitingQueue.Count;
         public int Capacity => _waitingQueue.Capacity;
 
-        public async Task<string> EnqueueAsync(
+        public async Task EnqueueAsync(
+            string callId,
             TParameters parameters,
             Func<SuccessCallEventArgs<TParameters, TResult>, CancellationToken, Task>? onSuccess = null,
             Func<ErrorCallEventArgs<TParameters>, CancellationToken, Task>? onError = null,
             CancellationToken cancellationToken = default)
         {
-            var callId = Guid.NewGuid().ToString();
             var callData = new CallData
             {
                 Id = callId,
@@ -56,8 +56,6 @@ namespace Revelium.Evm.Common
             await _pendingQueue.EnqueueAsync(callData, cancellationToken);
 
             _ = RunQueueProcessingInBackground(cancellationToken);
-
-            return callId;
         }
 
         public async Task<bool> TryCancelAsync(
