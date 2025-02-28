@@ -1,18 +1,10 @@
 ﻿using Revelium.Evm.Common;
 using Revelium.Evm.Crypto.Abstract;
-using Revelium.Evm.Transactions.Abstract;
 using System.Collections.Concurrent;
 using System.Threading;
 
 namespace Revelium.Evm.Rpc
 {
-    public class TransactionRequestParams
-    {
-        public TransactionRequestBase Tx { get; init; } = default!;
-        public bool EstimateGas { get; init; }
-        public uint? EstimateGasReserveInPercent { get; init; }
-    }
-
     /// <summary>
     /// A call sequencer for RPC calls.
     /// </summary>
