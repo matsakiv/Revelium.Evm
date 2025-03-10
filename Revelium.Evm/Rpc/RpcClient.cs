@@ -459,20 +459,40 @@ namespace Revelium.Evm.Rpc
         }
 
         /// <summary>
-        /// Gets information about a block by block number.
+        /// Gets block by block number.
         /// </summary>
         /// <param name="block">Optional block number, or Latest/Pending/Earliest. Defaults to Latest.</param>
-        /// <param name="includeTransactions">If true, returns full transaction objects. If false, only returns transaction hashes.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
-        /// <returns>Information about the specified block.</returns>
+        /// <returns>Block.</returns>
         public async Task<Result<Block>> GetBlockByNumberAsync(
             BlockNumber? block = null,
-            bool includeTransactions = true,
             CancellationToken cancellationToken = default)
         {
-            var request = CreateBlockByNumberRequest(block, includeTransactions);
+            var request = CreateBlockByNumberRequest(block, includeTransactions: true);
 
             var (response, error) = await SendAsync<Block>(
+                JsonSerializer.Serialize(request),
+                cancellationToken);
+
+            if (error != null)
+                return error;
+
+            return response!;
+        }
+
+        /// <summary>
+        /// Gets block without transactions by block number.
+        /// </summary>
+        /// <param name="block">Optional block number, or Latest/Pending/Earliest. Defaults to Latest.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>Block.</returns>
+        public async Task<Result<LightBlock>> GetLightBlockByNumberAsync(
+            BlockNumber? block = null,
+            CancellationToken cancellationToken = default)
+        {
+            var request = CreateBlockByNumberRequest(block, includeTransactions: false);
+
+            var (response, error) = await SendAsync<LightBlock>(
                 JsonSerializer.Serialize(request),
                 cancellationToken);
 

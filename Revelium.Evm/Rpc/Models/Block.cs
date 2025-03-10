@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Revelium.Evm.Rpc.Models
 {
-    public class Block
+    public class Block<T>
     {
         [JsonPropertyName("number")]
         public string Number { get; init; } = default!;
@@ -20,8 +20,11 @@ namespace Revelium.Evm.Rpc.Models
         [JsonPropertyName("timestamp")]
         public string TimeStamp { get; init; } = default!;
         [JsonPropertyName("transactions")]
-        public Transaction[] Transactions { get; init; } = default!;
+        public T[] Transactions { get; init; } = default!;
 
         public long GetBlockNumber() => Convert.ToInt64(Number[2..], 16);
     }
+
+    public class Block : Block<Transaction>;
+    public class LightBlock : Block<string>;
 }

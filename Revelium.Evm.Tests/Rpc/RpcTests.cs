@@ -1,7 +1,8 @@
 ﻿using Moq;
 using Moq.Protected;
-using Revelium.Evm.Rpc.Models;
 using Revelium.Evm.Common;
+using Revelium.Evm.Rpc.Models;
+using Revelium.Evm.Rpc.Parameters;
 using System.Net;
 using System.Numerics;
 using System.Text.Json;
@@ -390,6 +391,85 @@ namespace Revelium.Evm.Rpc
             // Assert
             Assert.NotNull(error);
             Assert.Equal(RpcClient.HTTP_REQUEST_ERROR, error.Code);
+            VerifyRequestSent();
+        }
+
+        [Fact]
+        public async Task Test_RpcClient_GetFeePerGasBatch()
+        {
+            SetupJsonRpcResponse(
+            "[" +
+                "{" +
+                    "\"jsonrpc\":\"2.0\"," +
+                    "\"id\":1," +
+                    "\"result\":\"0x3b3847a40\"" +
+                "}," +
+                "{" +
+                    "\"jsonrpc\":\"2.0\"," +
+                    "\"id\":2," +
+                    "\"result\":{" +
+                        "\"parentHash\":\"0xc0188b85ff8b95486e6caec6e6859b8b1e4ab44e58598b970fa4405922eb2eca\"," +
+                        "\"sha3Uncles\":\"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347\"," +
+                        "\"miner\":\"0x0000000000000000000000000000000000000000\"," +
+                        "\"stateRoot\":\"0x76f1ff886fdc3b8bfa595c2e486c2f4ba66f07243635fcd48adb6b809e820b17\"," +
+                        "\"transactionsRoot\":\"0x68c4ebe76e0491ecbc2e1018638b2bce3a2a086e1137b2b7309678e48249e785\"," +
+                        "\"receiptsRoot\":\"0x2f6abd03224f584d5f5ee4301dd9416f59ee6b5cf515ae64087e01c4ada5be0f\"," +
+                        "\"logsBloom\":\"0x01000000000000400080040404002000002000210000080000000800000000000000000000001000101002800000000060010000000028200000000000000000000000000000000900000008010008000000000000001400000004001002000040080000000040000000000020000000084000000008000200000010000810040000010000000000004401400010800000800010024200000000000008000000000000000000000000000000000000100000800040000000000000004028000000000022000000820000000000000000000000804001000000000400000000002000000000004000000000000000000040000000000000000200000000000400\"," +
+                        "\"difficulty\":\"0x0\"," +
+                        "\"number\":\"0xc4e236\"," +
+                        "\"gasLimit\":\"0x12a05f200\"," +
+                        "\"gasUsed\":\"0x3c6065\"," +
+                        "\"timestamp\":\"0x67cf3762\"," +
+                        "\"timestampNano\":\"0x182b86549f0a128c\"," +
+                        "\"extraData\":\"0x3662be8c00000000125cd890\"," +
+                        "\"mixHash\":\"0xbf6f4d32aa0680b1a397342d5c48a1b7c608df11ed9fc5736a21cbd24f126081\"," +
+                        "\"nonce\":\"0x0000000000000000\"," +
+                        "\"baseFeePerGas\":\"0xba43b7400\"," +
+                        "\"hash\":\"0x01ea60f699b3c138bccb932e9e3a683da0e9302653510b80430d88a09422acf5\"," +
+                        "\"epoch\":\"0x3a52\"," +
+                        "\"totalDifficulty\":\"0x0\"," +
+                        "\"withdrawalsRoot\":\"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\"," +
+                        "\"blobGasUsed\":\"0x0\"," +
+                        "\"excessBlobGas\":\"0x0\"," +
+                        "\"transactions\":[" +
+                            "\"0xbd5171aa2dcedca9602ef58dec643525c3b0615a12c0646765487f3de19e357c\"," +
+                            "\"0x3d576d04ff6228c30f482983a5517b3f99199db6ce344c81a5d49e8ffb289732\"," +
+                            "\"0xd5e98cba0e043a25c47b1e228bf40cb7f354b983efc7e39f70477cca88f1b504\"," +
+                            "\"0x214364f1bf194502e055c826843e2e90087aa1f8c76cc6c13c269fe59afbb1d2\"," +
+                            "\"0x251cf4bfc70f7b3fb4d5875dbd99f24b983fcf55cbe663eeb55a8b03587bf859\"," +
+                            "\"0x4c4728518715dbe8fc6fe45ceaccb246194d658fd0978b42d9227f3b3ad3e8d8\"," +
+                            "\"0x31a3352936f1c9671b04c4736c5b244204f9f226a5c1357c620a77f5c332697f\"," +
+                            "\"0x3843920e6f5a56cb5ecb8f891f7474394effa70a02fb5aff80c6f9ce793e67f9\"," +
+                            "\"0x38404535902ef970f7954d84a79c173f6c2b85a4b77128004ac37f7b48803eb1\"," +
+                            "\"0x38620249685e1e769e453a7b20105b9b5ae782334f1f90efab542db001dfc340\"," +
+                            "\"0x38051f8fdc523903866e696db6ca48d9c3908e2e43280c1ab1e52938f53cb0f7\"," +
+                            "\"0x3823ce77a9ebd138e55967e32b89a819426e900f3fb95230f1acea8720c84d63\"," +
+                            "\"0x38ef22da2342d9e0f8ec4e7c34c108cf75db2a622db8cd68975f3011028b6771\"," +
+                            "\"0x389f10a3dd6d3a0b0117e0b036c75d2769e2c99985b8cdea87522b48bd0de354\"," +
+                            "\"0x3883c4b25d47bfaea22f9da1dcf564208bac8c04b432b375b0e4a633a85df061\"," +
+                            "\"0x1f2d409e743286d8fa7655daf3bb6baa42622f6d07ee76b1f15b048b4f766c41\"," +
+                            "\"0x7e6f48f0c8d84c2411974f89379c72bcb850ad9723a45d105380aef1acb2580f\"," +
+                            "\"0xc5de9a88725302ca22637c6f9b4071b57bda2ad7ab43d48d7e6dfc64f6440768\"," +
+                            "\"0x409f3bdaecb02f6fb585cfd340bd23589e726850548d3faa28f17f20d0d06137\"," +
+                            "\"0x87bd045094ad530da3bdb059cab62e6cd010b436275aa446b0519d16f1c97728\"" +
+                        "]," +
+                        "\"size\":\"0x2e78\"," +
+                        "\"uncles\":[]" +
+                    "}" +
+                "}" +
+            "]");
+
+            var (((maxPriorityFeePerGas, feeError), (block, blockError)), error) =
+                await _rpc.SendBatchAsync<BigInteger, LightBlock>(
+                    _rpc.CreateMaxPriorityFeePerGasRequest() with { Id = 1 },
+                    _rpc.CreateBlockByNumberRequest(BlockNumber.Pending, includeTransactions: false) with { Id = 2 });
+
+            Assert.Null(error);
+            Assert.Null(feeError);
+            Assert.Null(blockError);
+            Assert.NotNull(block);
+            Assert.Equal(0x3b3847a40, maxPriorityFeePerGas);
+            Assert.Equal("0xba43b7400", block.BaseFeePerGas);
             VerifyRequestSent();
         }
 
