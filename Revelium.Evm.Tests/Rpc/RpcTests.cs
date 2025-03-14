@@ -473,6 +473,55 @@ namespace Revelium.Evm.Rpc
             VerifyRequestSent();
         }
 
+        [Fact]
+        public async Task Test_RpcClient_EstimageGas_Fail()
+        {
+            SetupJsonRpcResponse(
+            "{" +
+                "\"jsonrpc\":\"2.0\"," +
+                "\"id\":1," +
+                "\"error\":{" +
+                    "\"code\":3," +
+                    "\"message\":\"execution reverted\"," +
+                    "\"data\":\"0xee90c468\"" +
+                "}" +
+            "}");
+
+            var (result, error) = await _rpc.EstimateGasAsync(
+                to: "0xbAF872cE876EF3551A1623F966e097dfc91eaba0",
+                from: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+                data: "0x8456cb59");
+
+            Assert.NotNull(error);
+            Assert.Equal(3, error.Code);
+            Assert.Equal("Message: execution reverted, Data: 0xee90c468", error.Message);
+            VerifyRequestSent();
+        }
+
+        [Fact]
+        public async Task Test_RpcClient_EstimageGas_FailWithoutData()
+        {
+            SetupJsonRpcResponse(
+            "{" +
+                "\"jsonrpc\":\"2.0\"," +
+                "\"id\":1," +
+                "\"error\":{" +
+                    "\"code\":-32602," +
+                    "\"message\":\"invalid argument 0: json: cannot unmarshal hex string of odd length into Go struct field TransactionArgs.to of type common.Address\"" +
+                "}" +
+            "}");
+
+            var (result, error) = await _rpc.EstimateGasAsync(
+                to: "0xbAF872cE876EF3551A1623F966e097dfc91eaba",
+                from: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+                data: "0x8456cb59");
+
+            Assert.NotNull(error);
+            Assert.Equal(-32602, error.Code);
+            Assert.Equal("Message: invalid argument 0: json: cannot unmarshal hex string of odd length into Go struct field TransactionArgs.to of type common.Address", error.Message);
+            VerifyRequestSent();
+        }
+
         private void SetupJsonRpcResponseResult<T>(T result)
         {
             var response = new { jsonrpc = "2.0", id = 1, result };

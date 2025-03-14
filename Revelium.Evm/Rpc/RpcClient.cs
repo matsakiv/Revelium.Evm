@@ -722,7 +722,20 @@ namespace Revelium.Evm.Rpc
                         "Rpc response is null after deserialization to Response<TResult>");
 
                 if (rpcResponse.Error != null)
-                    return new Error(rpcResponse.Error.Code, rpcResponse.Error.Message);
+                {
+                    if (rpcResponse.Error.Data != null)
+                    {
+                        return new Error(
+                            rpcResponse.Error.Code,
+                            $"Message: {rpcResponse.Error.Message}, Data: {rpcResponse.Error.Data ?? ""}");
+                    }
+                    else
+                    {
+                        return new Error(
+                            rpcResponse.Error.Code,
+                            $"Message: {rpcResponse.Error.Message}");
+                    }
+                }
 
                 return rpcResponse.Result;
             }

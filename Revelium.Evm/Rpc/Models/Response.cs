@@ -8,6 +8,8 @@ namespace Revelium.Evm.Rpc.Models
         public int Code { get; init; }
         [JsonPropertyName("message")]
         public string Message { get; init; } = default!;
+        [JsonPropertyName("data")]
+        public string Data { get; init; } = default!;
     }
 
     public class Response<T>
