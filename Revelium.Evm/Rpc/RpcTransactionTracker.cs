@@ -51,7 +51,7 @@ namespace Revelium.Evm.Rpc
                     {
                         if (timeOut != null && DateTimeOffset.UtcNow >= startTimeStamp + timeOut)
                         {
-                            _logger?.LogWarning("Timeout reached for txId {@txId}", txId);
+                            _logger?.LogWarning("Timeout reached for txId {txId}", txId);
 
                             TimeOutReached?.Invoke(this, new ErrorEventArgs
                             {
@@ -80,7 +80,7 @@ namespace Revelium.Evm.Rpc
                             return;
                         }
 
-                        _logger?.LogInformation("Waiting for {@txId} receipt", txId);
+                        _logger?.LogInformation("Waiting for {txId} receipt", txId);
 
                         await Task.Delay(updateInterval, cancellationToken);
                     }

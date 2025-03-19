@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Revelium.Evm.Crypto.Abstract;
 using Revelium.Evm.Rpc;
 using Revelium.Evm.Rpc.Parameters;
+using Revelium.Evm.Services;
 using Revelium.Evm.Transactions;
 using Revelium.Evm.Transactions.Abstract;
 using System;
@@ -52,29 +53,25 @@ namespace Revelium.Evm.Common
         /// <param name="rpc">The RPC client instance.</param>
         /// <param name="tx">The transaction request.</param>
         /// <param name="signer">The transaction signer.</param>
+        /// <param name="nonceManager">Nonce manager.</param>
         /// <param name="estimateGas">Whether to estimate the gas required for the transaction.</param>
         /// <param name="estimateGasReserveInPercent">The percentage of gas to reserve for the transaction.</param>
-        /// <param name="networkId">The network ID.</param>
         /// <param name="logger">The logger.</param>
-        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <param name="ct">A token to cancel the operation.</param>
         /// <returns>The transaction ID.</returns>
         public static async Task<Result<string>> SignAndSendTransactionAsync(
             this RpcClient rpc,
             TransactionRequestBase tx,
             ISigner signer,
+            NonceManager nonceManager,
             bool estimateGas = true,
             uint? estimateGasReserveInPercent = 0,
-            string? networkId = null,
             ILogger? logger = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
-            using var nonceLock = await NonceManager.LockAsync(tx.From, networkId, cancellationToken);
+            using var nonceLock = await nonceManager.LockAsync(tx.From, ct);
 
-            var (nonce, nonceError) = await nonceLock.GetNonceAsync(
-                rpc,
-                pending: true,
-                logger: logger,
-                cancellationToken);
+            var (nonce, nonceError) = await nonceLock.GetNonceAsync(ct);
 
             if (nonceError != null)
                 return nonceError;
@@ -94,7 +91,7 @@ namespace Revelium.Evm.Common
 
                 if (estimateGasError != null)
                 {
-                    nonceLock.Reset(tx.Nonce, logger);
+                    nonceLock.Reset(tx.Nonce);
                     return estimateGasError;
                 }
 
@@ -108,15 +105,15 @@ namespace Revelium.Evm.Common
 
             if (!tx.Verify())
             {
-                nonceLock.Reset(tx.Nonce, logger);
+                nonceLock.Reset(tx.Nonce);
                 return new Error(TX_VERIFY_ERROR, "Can't verify transaction");
             }
 
-            var (txId, txSendError) = await rpc.SendTransactionAsync(tx, cancellationToken);
+            var (txId, txSendError) = await rpc.SendTransactionAsync(tx, ct);
 
             if (txSendError != null)
             {
-                nonceLock.Reset(tx.Nonce, logger);
+                nonceLock.Reset(tx.Nonce);
                 return new Error(TX_SEND_ERROR, "Transaction sending error", txSendError);
             }
 

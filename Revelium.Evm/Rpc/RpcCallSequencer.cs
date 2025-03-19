@@ -1,5 +1,6 @@
 ﻿using Revelium.Evm.Common;
 using Revelium.Evm.Crypto.Abstract;
+using Revelium.Evm.Services;
 using System.Collections.Concurrent;
 using System.Threading;
 
@@ -11,9 +12,10 @@ namespace Revelium.Evm.Rpc
     public class RpcCallSequencer(
         RpcClient rpc,
         ISigner signer,
+        NonceManager nonceManager,
         int capacity,
         string? networkId = null) : BoundedCallSequencer<TransactionRequestParams, string>(
-            CreateHandlerCallback(rpc, signer), capacity)
+            CreateHandlerCallback(rpc, signer, nonceManager), capacity)
     {
         private static ConcurrentDictionary<string, RpcCallSequencer>? _instances;
 
@@ -25,12 +27,14 @@ namespace Revelium.Evm.Rpc
         /// </summary>
         /// <param name="rpc">The RPC client.</param>
         /// <param name="signer">The signer.</param>
+        /// <param name="nonceManager">Nonce manager.</param>
         /// <param name="capacity">The capacity of the call sequencer.</param>
         /// <param name="networkId">The network ID.</param>
         /// <returns>The call sequencer.</returns>
         public static RpcCallSequencer GetOrAddInstance(
             RpcClient rpc,
             ISigner signer,
+            NonceManager nonceManager,
             int capacity,
             string? networkId = null)
         {
@@ -44,20 +48,24 @@ namespace Revelium.Evm.Rpc
 
             var instanceId = $"{networkId ?? ""}:{signer.GetAddress()}";
 
-            return instances.GetOrAdd(instanceId, id => new RpcCallSequencer(rpc, signer, capacity, networkId));
+            return instances.GetOrAdd(
+                instanceId,
+                id => new RpcCallSequencer(rpc, signer, nonceManager, capacity, networkId));
         }
 
         private static HandlerCallback<TransactionRequestParams, string> CreateHandlerCallback(
             RpcClient rpc,
-            ISigner signer)
+            ISigner signer,
+            NonceManager nonceManager)
         {
             return new HandlerCallback<TransactionRequestParams, string>(
-                (@params, cancellationToken) => rpc.SignAndSendTransactionAsync(
+                (@params, ct) => rpc.SignAndSendTransactionAsync(
                     tx: @params.Tx,
                     signer: signer,
+                    nonceManager: nonceManager,
                     estimateGas: @params.EstimateGas,
                     estimateGasReserveInPercent: @params.EstimateGasReserveInPercent,
-                    cancellationToken: cancellationToken));
+                    ct: ct));
         }
     }
 }
