@@ -7,7 +7,8 @@ In addition to the basic capabilities of creating, signing and sending EVM trans
 - `NonceManager` to effective offline `Nonce` management and send transactions without waiting for confirmations;
 - `RpcCallSequencer` to manage the queue of sent transactions. If the RPC has a limit on the number of transactions from one address, the class allows you to not exceed the limits, streamline sending, and allows you to cancel queued calls that have not yet been sent to the RPC;
 - `RpcClient` with built-in support for RPC calls batching, limiting the number of requests per unit of time and requests retries in case of errors with support for various strategies;
-- `BlockScoutApi` for BlockScout explorer.
+- `BlockScoutApi` for BlockScout explorer;
+- `GasStation` for automatically updating BaseFeePerGas and MaxPriorityFeePerGas values.
 
 ## Getting started
 
@@ -31,18 +32,15 @@ var rpc = new RpcClient(url: RpcUrl.ETHERLINK_GHOSTNET);
 
 Now we are ready to create and send the transaction:
 ```cs
-var approve = new Approve
-{
-    Spender = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-    Value = 1000000000000
-};
-
 var tx = new TransactionLegacyRequest
 {
     From = fromAddress,
     To = "0xdac17f958d2ee523a2206206994597c13d831ec7",
     GasPrice = 100000000,
-    Data = approve.CreateTransactionInput("0xdac17f958d2ee523a2206206994597c13d831ec7").Data
+    Data = Approve.GetData(
+        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        spender: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        value: 1000000000000)
 };
 
 var (txId, error) = await rpc.SignAndSendLegacyTransactionAsync(
@@ -64,7 +62,12 @@ Let's look at a more detailed and low-level transaction creation:
 
 First of all, we need a transaction counter for the nonce. To do this, we will use the `NonceManager`, which allows you to send transactions without waiting for confirmation of previous ones:
 ```cs
-using var nonceLock = await NonceManager.LockAsync(fromAddress);
+var nonceManager = new NonceManager(
+    new NonceManagerOprions {
+        Addresses = [fromAddress]
+    });
+
+using var nonceLock = await nonceManager.LockAsync(fromAddress);
 
 var (nonce, nonceError) = await nonceLock.GetNonceAsync(
     rpc: rpc,
@@ -85,7 +88,9 @@ var approve = new Approve
     Value = 1000000000000
 };
 
-var approveInput = approve.CreateTransactionInput("0xdac17f958d2ee523a2206206994597c13d831ec7").Data;
+var approveInput = approve
+    .CreateTransactionInput("0xdac17f958d2ee523a2206206994597c13d831ec7")
+    .Data;
 ```
 
 We can also estimate gas usage:

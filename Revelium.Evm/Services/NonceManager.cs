@@ -23,19 +23,24 @@ namespace Revelium.Evm.Services
         public int UpdateIntervalMs { get; init; } = 10 * 1000; // 10 seconds
 
         /// <summary>
-        /// The nonce expiration time in milliseconds.
+        /// The nonce force update interval in milliseconds.
         /// </summary>
-        public int NonceExpirationMs { get; init; } = 3 * 60 * 1000; // 3 minutes
+        public int NonceForceUpdateIntervalMs { get; init; } = 60 * 1000; // 1 minutes
 
         /// <summary>
-        /// The offline nonce expiration time in milliseconds.
+        /// The offline nonce force reset interval in milliseconds.
         /// </summary>
-        public int OfflineNonceExpirationMs { get; init; } = 60 * 1000; // 1 minute
+        public int OfflineNonceForceResetIntervalMs { get; init; } = 2 * 60 * 1000; // 2 minutes
 
         /// <summary>
         /// The addresses to manage.
         /// </summary>
         public string[] Addresses { get; init; } = default!;
+
+        /// <summary>
+        /// Whether to use pending transactions count.
+        /// </summary>
+        public bool UsePending { get; init; } = true;
     }
 
     /// <summary>
@@ -46,6 +51,7 @@ namespace Revelium.Evm.Services
         private class NonceEntry
         {
             public DateTimeOffset TimeStamp { get; set; }
+            public DateTimeOffset LastChangeTimeStamp { get; set; }
             public BigInteger Nonce { get; set; }
         }
 
@@ -62,7 +68,7 @@ namespace Revelium.Evm.Services
             private NonceLock(NonceManager nonceManager, string address, SemaphoreSlim sync)
             {
                 _nonceManager = nonceManager;
-                _address = address;
+                _address = address.ToLowerInvariant();
                 _sync = sync;
             }
 
@@ -124,7 +130,7 @@ namespace Revelium.Evm.Services
         private readonly Dictionary<string, NonceEntry?> _networkNonces;
 
         private readonly Dictionary<string, SemaphoreSlim> _offlineNonceSyncs;
-        private readonly Dictionary<string, NonceEntry?> _offlineNonces;
+        private readonly Dictionary<string, BigInteger?> _offlineNonces;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NonceManager"/> class.
@@ -155,7 +161,7 @@ namespace Revelium.Evm.Services
 
             _offlineNonces = _options.Addresses.ToDictionary(
                 a => a.ToLowerInvariant(),
-                a => default(NonceEntry));
+                a => (BigInteger?)null);
         }
 
         /// <summary>
@@ -202,76 +208,96 @@ namespace Revelium.Evm.Services
             string address,
             CancellationToken ct = default)
         {
-            return NonceLock.LockAsync(this, address, _offlineNonceSyncs[address], ct);
+            return NonceLock.LockAsync(this, address, _offlineNonceSyncs[address.ToLowerInvariant()], ct);
         }
 
-        private (BigInteger? nonce, DateTimeOffset? timeStamp) GetNetworkNonce(string address)
+        /// <summary>
+        /// Gets the last updated network nonce for an address.
+        /// </summary>
+        public (BigInteger? nonce, DateTimeOffset? timeStamp) GetNetworkNonce(string address)
+        {
+            var entry = GetNetworkNonceEntry(address.ToLowerInvariant());
+
+            return (entry?.Nonce, entry?.TimeStamp);
+        }
+
+        private NonceEntry? GetNetworkNonceEntry(string address)
         {
             lock (_networkNonceSyncs[address])
             {
-                return (_networkNonces[address]?.Nonce, _networkNonces[address]?.TimeStamp);
+                var entry = _networkNonces[address];
+
+                if (entry == null)
+                    return null;
+
+                return new NonceEntry
+                {
+                    Nonce = entry.Nonce,
+                    TimeStamp = entry.TimeStamp,
+                    LastChangeTimeStamp = entry.LastChangeTimeStamp
+                };
             }
         }
 
         private async Task<Result<BigInteger>> GetNonceAsync(string address, CancellationToken ct = default)
         {
-            var (networkNonce, networkTimeStamp) = GetNetworkNonce(address);
+            var timeStamp = DateTimeOffset.UtcNow;
 
-            if (networkNonce == null)
+            var networkNonceEntry = GetNetworkNonceEntry(address);
+
+            if (networkNonceEntry == null ||
+                timeStamp - networkNonceEntry.TimeStamp >= TimeSpan.FromMilliseconds(_options.NonceForceUpdateIntervalMs))
             {
-                await UpdateNonceAsync(address, ct);
+                if (!await UpdateNonceAsync(address, ct))
+                    return new Error("Failed to get network nonce");
 
-                (networkNonce, networkTimeStamp) = GetNetworkNonce(address);
+                networkNonceEntry = GetNetworkNonceEntry(address);
 
-                if (networkNonce == null)
+                if (networkNonceEntry == null)
                     return new Error("Failed to get network nonce");
             }
 
-            var currentNonce = networkNonce.Value;
+            var currentNonce = networkNonceEntry.Nonce;
 
-            if (_offlineNonces.TryGetValue(address, out var offlineNonce) && offlineNonce != null)
+            if (_offlineNonces.TryGetValue(address, out var offlineNonce) &&
+                offlineNonce != null &&
+                offlineNonce > networkNonceEntry.Nonce)
             {
-                if (offlineNonce.TimeStamp - networkTimeStamp!.Value >=
-                    TimeSpan.FromMilliseconds(_options.OfflineNonceExpirationMs))
+                if (timeStamp - networkNonceEntry.LastChangeTimeStamp <
+                    TimeSpan.FromMilliseconds(_options.OfflineNonceForceResetIntervalMs))
                 {
-                    _logger?.LogWarning("Offline nonce for {Address} has expired. Using network nonce.", address);
+                    currentNonce = offlineNonce.Value;
                 }
-
-                if (offlineNonce.Nonce > networkNonce.Value &&
-                    offlineNonce.TimeStamp - networkTimeStamp!.Value <
-                    TimeSpan.FromMilliseconds(_options.OfflineNonceExpirationMs))
+                else
                 {
-                    currentNonce = offlineNonce.Nonce;
+                    _logger?.LogWarning(
+                        "Offline nonce for {Address} too far in the future more than {Interval}ms. " +
+                        "Using network nonce.",
+                        address,
+                        _options.OfflineNonceForceResetIntervalMs);
                 }
             }
 
-            _offlineNonces[address] = new NonceEntry
-            {
-                Nonce = currentNonce + 1,
-                TimeStamp = DateTimeOffset.UtcNow
-            };
+            _offlineNonces[address] = currentNonce + 1;
 
             return currentNonce;
         }
 
         private void Reset(string address, BigInteger nonce)
         {
-            if (!_offlineNonces.TryGetValue(address.ToLowerInvariant(), out var offlineNonce) || offlineNonce == null)
-                return;
-
-            offlineNonce.Nonce = nonce;
+            _offlineNonces[address] = nonce;
 
             _logger?.LogDebug("Reset {address} nonce to {nonce}", address, nonce.ToString());
         }
 
-        public async Task UpdateNonceAsync(string address, CancellationToken ct = default)
+        public async Task<bool> UpdateNonceAsync(string address, CancellationToken ct = default)
         {
             try
             {
                 var (transactionCount, error) = await _rpc
                     .GetTransactionCountAsync(
                         address,
-                        BlockNumber.Latest,
+                        _options.UsePending ? BlockNumber.Pending : BlockNumber.Latest,
                         ct)
                     .ConfigureAwait(false);
 
@@ -282,17 +308,17 @@ namespace Revelium.Evm.Services
                         address,
                         error);
 
-                    return;
+                    return false;
                 }
 
-                var timeStamp = DateTimeOffset.UtcNow;
-
-                TrySetNetworkNonce(address.ToLowerInvariant(), transactionCount, timeStamp);
+                TrySetNetworkNonce(address.ToLowerInvariant(), transactionCount, DateTimeOffset.UtcNow);
 
                 _logger?.LogInformation(
                     "Network nonce for {Address} is {Nonce}",
                     address,
                     transactionCount.ToString());
+
+                return true;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -302,6 +328,8 @@ namespace Revelium.Evm.Services
             {
                 _logger?.LogError(e, "Error updating nonce");
             }
+
+            return false;
         }
 
         private bool TrySetNetworkNonce(string address, BigInteger nonce, DateTimeOffset timeStamp)
@@ -310,24 +338,37 @@ namespace Revelium.Evm.Services
             {
                 var previousEntry = _networkNonces[address];
 
-                if (previousEntry != null && previousEntry.Nonce > nonce)
-                {
-                    _logger?.LogWarning("Nonce for {Address} is lower than the previous network nonce. " +
-                        "Previous: {PreviousNonce}. " +
-                        "Current: {CurrentNonce}",
-                        address,
-                        previousEntry.Nonce,
-                        nonce);
-                }
-
-                if (previousEntry == null ||
-                    previousEntry.Nonce != nonce ||
-                    timeStamp - previousEntry.TimeStamp >= TimeSpan.FromMilliseconds(_options.NonceExpirationMs))
+                if (previousEntry == null || previousEntry.Nonce <= nonce)
                 {
                     _networkNonces[address] = new NonceEntry
                     {
                         Nonce = nonce,
-                        TimeStamp = timeStamp
+                        TimeStamp = timeStamp,
+                        LastChangeTimeStamp = previousEntry == null || previousEntry.Nonce < nonce
+                            ? timeStamp
+                            : previousEntry.LastChangeTimeStamp
+                    };
+
+                    return true;
+                }
+
+                _logger?.LogWarning("Nonce for {Address} is lower than the previous network nonce. " +
+                    "Previous: {prev}. " +
+                    "Current: {curr}",
+                    address,
+                    previousEntry.Nonce.ToString(),
+                    nonce.ToString());
+
+                // previousEntry.Nonce > nonce
+                if (timeStamp - previousEntry.TimeStamp >= TimeSpan.FromMilliseconds(_options.NonceForceUpdateIntervalMs))
+                {
+                    _logger?.LogWarning("Force updating nonce for {Address}", address);
+
+                    _networkNonces[address] = new NonceEntry
+                    {
+                        Nonce = nonce,
+                        TimeStamp = timeStamp,
+                        LastChangeTimeStamp = timeStamp
                     };
 
                     return true;

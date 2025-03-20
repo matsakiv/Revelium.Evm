@@ -474,7 +474,7 @@ namespace Revelium.Evm.Rpc
         }
 
         [Fact]
-        public async Task Test_RpcClient_EstimageGas_Fail()
+        public async Task Test_RpcClient_EstimateGas_Fail()
         {
             SetupJsonRpcResponse(
             "{" +
@@ -499,7 +499,7 @@ namespace Revelium.Evm.Rpc
         }
 
         [Fact]
-        public async Task Test_RpcClient_EstimageGas_FailWithoutData()
+        public async Task Test_RpcClient_EstimateGas_FailWithoutData()
         {
             SetupJsonRpcResponse(
             "{" +
