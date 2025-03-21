@@ -132,55 +132,6 @@ namespace Revelium.Evm.Nonce
         }
 
         [Fact]
-        public async Task Test_NonceManager_OfflineNonceForceReset()
-        {
-            BigInteger nonce;
-            Error? error;
-            bool isUpdated;
-
-            SetupJsonRpcResponseResult("0x7");
-            isUpdated = await _nonceManager.UpdateNonceAsync(ADDRESS);
-
-            using (var nonceLock = await _nonceManager.LockAsync(ADDRESS))
-                (nonce, error) = await nonceLock.GetNonceAsync();
-
-            Assert.Null(error);
-            Assert.Equal(7, nonce);
-            Assert.True(isUpdated);
-
-            SetupJsonRpcResponseResult("0x6");
-            isUpdated = await _nonceManager.UpdateNonceAsync(ADDRESS);
-
-            using (var nonceLock = await _nonceManager.LockAsync(ADDRESS))
-                (nonce, error) = await nonceLock.GetNonceAsync();
-
-            Assert.Null(error);
-            Assert.Equal(8, nonce);
-            Assert.True(isUpdated);
-
-            await Task.Delay(_options.NonceForceUpdateIntervalMs);
-
-            SetupJsonRpcResponseResult("0x6");
-            isUpdated = await _nonceManager.UpdateNonceAsync(ADDRESS);
-
-            using (var nonceLock = await _nonceManager.LockAsync(ADDRESS))
-                (nonce, error) = await nonceLock.GetNonceAsync();
-
-            Assert.Null(error);
-            Assert.Equal(9, nonce);
-            Assert.True(isUpdated);
-
-            await Task.Delay(_options.OfflineNonceForceResetIntervalMs);
-
-            SetupJsonRpcResponseResult("0x6");
-            using (var nonceLock = await _nonceManager.LockAsync(ADDRESS))
-                (nonce, error) = await nonceLock.GetNonceAsync();
-
-            Assert.Null(error);
-            Assert.Equal(6, nonce);
-        }
-
-        [Fact]
         public async Task Test_NonceManager_ParallelNonceUpdates()
         {
             SetupJsonRpcResponseResult("0x1");

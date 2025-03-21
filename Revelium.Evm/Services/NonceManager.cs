@@ -51,7 +51,6 @@ namespace Revelium.Evm.Services
         private class NonceEntry
         {
             public DateTimeOffset TimeStamp { get; set; }
-            public DateTimeOffset LastChangeTimeStamp { get; set; }
             public BigInteger Nonce { get; set; }
         }
 
@@ -233,8 +232,7 @@ namespace Revelium.Evm.Services
                 return new NonceEntry
                 {
                     Nonce = entry.Nonce,
-                    TimeStamp = entry.TimeStamp,
-                    LastChangeTimeStamp = entry.LastChangeTimeStamp
+                    TimeStamp = entry.TimeStamp
                 };
             }
         }
@@ -263,19 +261,7 @@ namespace Revelium.Evm.Services
                 offlineNonce != null &&
                 offlineNonce > networkNonceEntry.Nonce)
             {
-                if (timeStamp - networkNonceEntry.LastChangeTimeStamp <
-                    TimeSpan.FromMilliseconds(_options.OfflineNonceForceResetIntervalMs))
-                {
-                    currentNonce = offlineNonce.Value;
-                }
-                else
-                {
-                    _logger?.LogWarning(
-                        "Offline nonce for {Address} too far in the future more than {Interval}ms. " +
-                        "Using network nonce.",
-                        address,
-                        _options.OfflineNonceForceResetIntervalMs);
-                }
+                currentNonce = offlineNonce.Value;
             }
 
             _offlineNonces[address] = currentNonce + 1;
@@ -343,10 +329,7 @@ namespace Revelium.Evm.Services
                     _networkNonces[address] = new NonceEntry
                     {
                         Nonce = nonce,
-                        TimeStamp = timeStamp,
-                        LastChangeTimeStamp = previousEntry == null || previousEntry.Nonce < nonce
-                            ? timeStamp
-                            : previousEntry.LastChangeTimeStamp
+                        TimeStamp = timeStamp
                     };
 
                     return true;
@@ -367,8 +350,7 @@ namespace Revelium.Evm.Services
                     _networkNonces[address] = new NonceEntry
                     {
                         Nonce = nonce,
-                        TimeStamp = timeStamp,
-                        LastChangeTimeStamp = timeStamp
+                        TimeStamp = timeStamp
                     };
 
                     return true;
