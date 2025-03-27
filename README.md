@@ -132,9 +132,9 @@ if (error != null)
 Let's create a batch of requests:
 ```cs
 var (batchResult, error) = await rpc.SendBatchAsync<BigInteger, Block, BigInteger>(
-    rpc.CreateBalanceRequest(ADDRESS) with { Id = 1 },
-    rpc.CreateBlockByNumberRequest() with { Id = 2 },
-    rpc.CreateMaxPriorityFeePerGasRequest() with { Id = 3 });
+    RpcClient.CreateBalanceRequest(ADDRESS) with { Id = 1 },
+    RpcClient.CreateBlockByNumberRequest() with { Id = 2 },
+    RpcClient.CreateMaxPriorityFeePerGasRequest() with { Id = 3 });
 
 // use destructuring to get the results
 var ((balance, balanceError), (block, blockError), (fee, feeError)) = batchResult;

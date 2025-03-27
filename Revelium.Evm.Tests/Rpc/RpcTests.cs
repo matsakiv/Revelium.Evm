@@ -274,6 +274,97 @@ namespace Revelium.Evm.Rpc
         }
 
         [Fact()]
+        public async Task Test_RpcClient_GetLogsWithTopicsFilter()
+        {
+            // Arrange
+            SetupJsonRpcResponse(
+            "{" +
+                "\"jsonrpc\":\"2.0\"," +
+                "\"result\":[" +
+                    "{" +
+                        "\"address\":\"0xd0bc067cf877f7b76ceb331891331d9e6acda1a7\"," +
+                        "\"topics\":[" +
+                            "\"0x921a8ce27b6521c36c2f7901104535739cfb9dc28cd1bca46f5fe5913f0d079d\"" +
+                        "]," +
+                        "\"data\":\"0x000000000000000000000000000000000000000000000000001c9ffffffb84ae00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b9ad81e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"," +
+                        "\"blockNumber\":\"0x843b97\"," +
+                        "\"transactionHash\":\"0xc1de995ede032da3c38d845dfc211860096f1281fd970ef8e840830f0fdbfa50\"," +
+                        "\"transactionIndex\":\"0x1\"," +
+                        "\"blockHash\":\"0xf7d63a306492efe5fb758e5b88cfcad7967ba8682f764a3efc891bace0686f2c\"," +
+                        "\"logIndex\":\"0xf\"," +
+                        "\"removed\":false" +
+                    "}," +
+                    "{" +
+                        "\"address\":\"0xd0bc067cf877f7b76ceb331891331d9e6acda1a7\"," +
+                        "\"topics\":[" +
+                            "\"0x921a8ce27b6521c36c2f7901104535739cfb9dc28cd1bca46f5fe5913f0d079d\"" +
+                        "]," +
+                        "\"data\":\"0x000000000000000000000000000000000000000000000000001c99fffffb84ac000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000218712f5500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"," +
+                        "\"blockNumber\":\"0x843b97\"," +
+                        "\"transactionHash\":\"0xc1de995ede032da3c38d845dfc211860096f1281fd970ef8e840830f0fdbfa50\"," +
+                        "\"transactionIndex\":\"0x1\"," +
+                        "\"blockHash\":\"0xf7d63a306492efe5fb758e5b88cfcad7967ba8682f764a3efc891bace0686f2c\"," +
+                        "\"logIndex\":\"0x12\"," +
+                        "\"removed\":false" +
+                    "}," +
+                    "{" +
+                        "\"address\":\"0xd0bc067cf877f7b76ceb331891331d9e6acda1a7\"," +
+                        "\"topics\":[" +
+                            "\"0x7cbbf9e533e963aebd385f66fc01e69558a4fe08eb6c6bc0127fa292b0442800\"," +
+                            "\"0x000000000000000000000000fc03b2f8b4fb6438ce7d4e4b5f91372157a514cd\"," +
+                            "\"0x0000000000000000000000000000000000000000000000000000000000000000\"" +
+                        "]," +
+                        "\"data\":\"0x000000000000000000000000000000000000000000000000001ca4fffffb84aa00000000000000000000000000000000000000000000000000000000000214c50000000000000000000000000000000000000000000000000000000000001ca400000000000000000000000000000000000000000000000000000000000214c5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"," +
+                        "\"blockNumber\":\"0x843b97\"," +
+                        "\"transactionHash\":\"0xc1de995ede032da3c38d845dfc211860096f1281fd970ef8e840830f0fdbfa50\"," +
+                        "\"transactionIndex\":\"0x1\"," +
+                        "\"blockHash\":\"0xf7d63a306492efe5fb758e5b88cfcad7967ba8682f764a3efc891bace0686f2c\"," +
+                        "\"logIndex\":\"0x15\"," +
+                        "\"removed\":false" +
+                    "}," +
+                    "{" +
+                        "\"address\":\"0xd0bc067cf877f7b76ceb331891331d9e6acda1a7\"," +
+                        "\"topics\":[" +
+                            "\"0x7cbbf9e533e963aebd385f66fc01e69558a4fe08eb6c6bc0127fa292b0442800\"," +
+                            "\"0x000000000000000000000000fc03b2f8b4fb6438ce7d4e4b5f91372157a514cd\"," +
+                            "\"0x0000000000000000000000000000000000000000000000000000000000000000\"" +
+                        "]," +
+                        "\"data\":\"0x000000000000000000000000000000000000000000000000001c9efffffb84a8000000000000000000000000000000000000000000000000000000000012bed60000000000000000000000000000000000000000000000000000000000001c9e000000000000000000000000000000000000000000000000000000000012bed6000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"," +
+                        "\"blockNumber\":\"0x843b97\"," +
+                        "\"transactionHash\":\"0xc1de995ede032da3c38d845dfc211860096f1281fd970ef8e840830f0fdbfa50\"," +
+                        "\"transactionIndex\":\"0x1\"," +
+                        "\"blockHash\":\"0xf7d63a306492efe5fb758e5b88cfcad7967ba8682f764a3efc891bace0686f2c\"," +
+                        "\"logIndex\":\"0x17\"," +
+                        "\"removed\":false" +
+                    "}" +
+                "]," +
+                "\"id\":1" +
+            "}");
+
+            // Act
+            var (logs, error) = await _rpc.GetLogsWithTopicsFilterAsync(
+                fromBlock: BlockNumber.FromValue(0x843b97),
+                toBlock: BlockNumber.FromValue(0x843b97),
+                address: "0xD0BC067CF877F7b76CeB331891331d9e6ACda1a7",
+                topics: [
+                    [
+                        "0x7cbbf9e533e963aebd385f66fc01e69558a4fe08eb6c6bc0127fa292b0442800",
+                        "0x921a8ce27b6521c36c2f7901104535739cfb9dc28cd1bca46f5fe5913f0d079d"
+                    ]
+                ]);
+
+            // Assert
+            Assert.Null(error);
+            Assert.NotEmpty(logs);
+            Assert.Equal(4, logs.Count);
+            Assert.Equal("0x921a8ce27b6521c36c2f7901104535739cfb9dc28cd1bca46f5fe5913f0d079d", logs[0].Topics[0]);
+            Assert.Equal("0x921a8ce27b6521c36c2f7901104535739cfb9dc28cd1bca46f5fe5913f0d079d", logs[1].Topics[0]);
+            Assert.Equal("0x7cbbf9e533e963aebd385f66fc01e69558a4fe08eb6c6bc0127fa292b0442800", logs[2].Topics[0]);
+            Assert.Equal("0x7cbbf9e533e963aebd385f66fc01e69558a4fe08eb6c6bc0127fa292b0442800", logs[3].Topics[0]);
+            VerifyRequestSent();
+        }
+
+        [Fact()]
         public async Task Test_RpcClient_EstimateGas()
         {
             // Arrange
@@ -360,9 +451,9 @@ namespace Revelium.Evm.Rpc
 
             // Act
             var (result, error) = await _rpc.SendBatchAsync<BigInteger, Block, BigInteger>(
-                _rpc.CreateBalanceRequest(ADDRESS) with { Id = 1 },
-                _rpc.CreateBlockByNumberRequest() with { Id = 2 },
-                _rpc.CreateMaxPriorityFeePerGasRequest() with { Id = 3 });
+                RpcClient.CreateBalanceRequest(ADDRESS) with { Id = 1 },
+                RpcClient.CreateBlockByNumberRequest() with { Id = 2 },
+                RpcClient.CreateMaxPriorityFeePerGasRequest() with { Id = 3 });
 
             var ((balance, balanceError), (block, blockError), (fee, feeError)) = result;
 
@@ -461,8 +552,8 @@ namespace Revelium.Evm.Rpc
 
             var (((maxPriorityFeePerGas, feeError), (block, blockError)), error) =
                 await _rpc.SendBatchAsync<BigInteger, LightBlock>(
-                    _rpc.CreateMaxPriorityFeePerGasRequest() with { Id = 1 },
-                    _rpc.CreateBlockByNumberRequest(BlockNumber.Pending, includeTransactions: false) with { Id = 2 });
+                    RpcClient.CreateMaxPriorityFeePerGasRequest() with { Id = 1 },
+                    RpcClient.CreateBlockByNumberRequest(BlockNumber.Pending, includeTransactions: false) with { Id = 2 });
 
             Assert.Null(error);
             Assert.Null(feeError);

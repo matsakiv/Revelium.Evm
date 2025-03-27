@@ -157,8 +157,8 @@ namespace Revelium.Evm.Services
         {
             var (((maxPriorityFeePerGas, feeError), (block, blockError)), error) =
                 await _rpc.SendBatchAsync<BigInteger, LightBlock>(
-                    _rpc.CreateMaxPriorityFeePerGasRequest(),
-                    _rpc.CreateBlockByNumberRequest(BlockNumber.Pending, includeTransactions: false),
+                    RpcClient.CreateMaxPriorityFeePerGasRequest(),
+                    RpcClient.CreateBlockByNumberRequest(BlockNumber.Pending, includeTransactions: false),
                     cancellationToken);
 
             if (error != null)

@@ -74,283 +74,6 @@ namespace Revelium.Evm.Rpc
         }
 
         /// <summary>
-        /// Creates a request to get the balance of an address at a specific block.
-        /// </summary>
-        /// <param name="address">The address to get the balance of.</param>
-        /// <param name="block">The block number to get the balance at. Defaults to Latest.</param>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateBalanceRequest(
-            string address,
-            BlockNumber? block = null)
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_getBalance",
-                Params =
-                [
-                    address,
-                    block?.Value ?? BlockNumber.Latest.Value
-                ]
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to get the number of transactions sent from an address at a specific block.
-        /// </summary>
-        /// <param name="address">The address to get the transaction count from.</param>
-        /// <param name="block">The block number to get the transaction count at. Defaults to Latest.</param>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateTransactionCountRequest(
-            string address,
-            BlockNumber? block = null)
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_getTransactionCount",
-                Params =
-                [
-                    address,
-                    block?.Value ?? BlockNumber.Latest.Value
-                ]
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to get the current gas price.
-        /// </summary>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateGasPriceRequest()
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_gasPrice",
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to get the current maxPriorityFeePerGas.
-        /// </summary>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateMaxPriorityFeePerGasRequest()
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_maxPriorityFeePerGas",
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to get the latest block number.
-        /// </summary>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateBlockNumberRequest()
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_blockNumber",
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to get information about a block by block number.
-        /// </summary>
-        /// <param name="block">Optional block number, or Latest/Pending/Earliest. Defaults to Latest.</param>
-        /// <param name="includeTransactions">If true, returns full transaction objects. If false, only returns transaction hashes.</param>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateBlockByNumberRequest(
-            BlockNumber? block = null,
-            bool includeTransactions = true)
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_getBlockByNumber",
-                Params =
-                [
-                    block?.Value ?? BlockNumber.Latest.Value,
-                    includeTransactions
-                ]
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to get the transaction receipt for a transaction.
-        /// </summary>
-        /// <param name="txId">The transaction hash.</param>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateTransactionReceiptRequest(string txId)
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_getTransactionReceipt",
-                Params = [ txId ]
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to get logs matching the specified filter criteria.
-        /// </summary>
-        /// <param name="fromBlock">Optional start block number.</param>
-        /// <param name="toBlock">Optional end block number.</param>
-        /// <param name="address">Optional contract address to filter by.</param>
-        /// <param name="topics">Optional array of topics to filter by.</param>
-        /// <param name="blockHash">Optional block hash to get logs from a single block.</param>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateLogsRequest(
-            BlockNumber? fromBlock = null,
-            BlockNumber? toBlock = null,
-            string? address = null,
-            string[]? topics = null,
-            string? blockHash = null)
-        {
-            var @params = new Dictionary<string, object>();
-
-            if (fromBlock != null)
-                @params.Add("fromBlock", fromBlock.Value.Value);
-
-            if (toBlock != null)
-                @params.Add("toBlock", toBlock.Value.Value);
-
-            if (address != null)
-                @params.Add("address", address);
-
-            if (topics != null && topics.Length > 0)
-                @params.Add("topics", topics);
-
-            if (blockHash != null)
-                @params.Add("blockHash", blockHash);
-
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_getLogs",
-                Params = @params.Count > 0
-                    ? [@params]
-                    : []
-            };
-        }
-
-        public RpcRequest CreateEstimateGasRequest(
-            string to,
-            string? from = null,
-            BigInteger? gas = null,
-            BigInteger? gasPrice = null,
-            BigInteger? maxPriorityFeePerGas = null,
-            BigInteger? maxFeePerGas = null,
-            BigInteger? value = null,
-            string? data = null,
-            BlockNumber? block = null)
-        {
-            var @params = new Dictionary<string, object>();
-
-            if (from != null)
-                @params.Add("from", from);
-
-            if (gas != null)
-                @params.Add("gas", new HexBigInteger(gas.Value).HexValue);
-
-            if (gasPrice != null)
-                @params.Add("gasPrice", new HexBigInteger(gasPrice.Value).HexValue);
-
-            if (maxPriorityFeePerGas != null)
-                @params.Add("maxPriorityFeePerGas", new HexBigInteger(maxPriorityFeePerGas.Value).HexValue);
-
-            if (maxFeePerGas != null)
-                @params.Add("maxFeePerGas", new HexBigInteger(maxFeePerGas.Value).HexValue);
-
-            if (value != null)
-                @params.Add("value", new HexBigInteger(value.Value).HexValue);
-
-            if (data != null)
-                @params.Add("data", data);
-
-            @params.Add("to", to);
-
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_estimateGas",
-                Params =
-                [
-                    @params,
-                    block?.Value ?? BlockNumber.Latest.Value
-                ]
-            };
-        }
-
-        public RpcRequest CreateCallRequest(
-            string to,
-            string? from = null,
-            BigInteger? gas = null,
-            BigInteger? gasPrice = null,
-            BigInteger? value = null,
-            string? input = null,
-            BlockNumber? block = null)
-        {
-            var @params = new Dictionary<string, object>();
-
-            if (from != null)
-                @params.Add("from", from);
-
-            if (gas != null)
-                @params.Add("gas", new HexBigInteger(gas.Value).HexValue);
-
-            if (gasPrice != null)
-                @params.Add("gasPrice", new HexBigInteger(gasPrice.Value).HexValue);
-
-            if (value != null)
-                @params.Add("value", new HexBigInteger(value.Value).HexValue);
-
-            if (input != null)
-                @params.Add("input", input);
-
-            @params.Add("to", to);
-
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_call",
-                Params =
-                [
-                    @params,
-                    block?.Value ?? BlockNumber.Latest.Value
-                ]
-            };
-        }
-
-        /// <summary>
-        /// Creates a request to send a raw transaction to the network.
-        /// </summary>
-        /// <param name="signedTransactionData">The signed transaction data as a hexadecimal string (without 0x prefix).</param>
-        /// <returns>A RpcRequest object containing the request details.</returns>
-        public RpcRequest CreateSendRawTransactionRequest(string signedTransactionData)
-        {
-            return new RpcRequest
-            {
-                Id = 1,
-                JsonRpc = "2.0",
-                Method = "eth_sendRawTransaction",
-                Params = [ "0x" + signedTransactionData ]
-            };
-        }
-
-        /// <summary>
         /// Gets the account balance at the specified address.
         /// </summary>
         /// <param name="address">The address to check for balance.</param>
@@ -538,6 +261,36 @@ namespace Revelium.Evm.Rpc
             CancellationToken cancellationToken = default)
         {
             var request = CreateLogsRequest(fromBlock, toBlock, address, topics, blockHash);
+
+            var (response, error) = await SendAsync<List<Log>>(
+                JsonSerializer.Serialize(request),
+                cancellationToken);
+
+            if (error != null)
+                return error;
+
+            return response!;
+        }
+
+        /// <summary>
+        /// Gets logs matching the specified filter criteria.
+        /// </summary>
+        /// <param name="fromBlock">Optional start block number.</param>
+        /// <param name="toBlock">Optional end block number.</param>
+        /// <param name="address">Optional contract address to filter by.</param>
+        /// <param name="topics">Optional array of topics to filter by. Each topic can also be an array of DATA with "or" options</param>
+        /// <param name="blockHash">Optional block hash to get logs from a single block.</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
+        /// <returns>A list of matching log entries.</returns>
+        public async Task<Result<List<Log>>> GetLogsWithTopicsFilterAsync(
+            BlockNumber? fromBlock = null,
+            BlockNumber? toBlock = null,
+            string? address = null,
+            string[][]? topics = null,
+            string? blockHash = null,
+            CancellationToken cancellationToken = default)
+        {
+            var request = CreateLogsWithTopicsFilterRequest(fromBlock, toBlock, address, topics, blockHash);
 
             var (response, error) = await SendAsync<List<Log>>(
                 JsonSerializer.Serialize(request),
@@ -813,6 +566,347 @@ namespace Revelium.Evm.Rpc
             };
 
             return new HttpClient(retryHttpClientHandler);
+        }
+
+        /// <summary>
+        /// Creates a request to get the balance of an address at a specific block.
+        /// </summary>
+        /// <param name="address">The address to get the balance of.</param>
+        /// <param name="block">The block number to get the balance at. Defaults to Latest.</param>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateBalanceRequest(
+            string address,
+            BlockNumber? block = null)
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_getBalance",
+                Params =
+                [
+                    address,
+                    block?.Value ?? BlockNumber.Latest.Value
+                ]
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get the number of transactions sent from an address at a specific block.
+        /// </summary>
+        /// <param name="address">The address to get the transaction count from.</param>
+        /// <param name="block">The block number to get the transaction count at. Defaults to Latest.</param>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateTransactionCountRequest(
+            string address,
+            BlockNumber? block = null)
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_getTransactionCount",
+                Params =
+                [
+                    address,
+                    block?.Value ?? BlockNumber.Latest.Value
+                ]
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get the current gas price.
+        /// </summary>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateGasPriceRequest()
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_gasPrice",
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get the current maxPriorityFeePerGas.
+        /// </summary>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateMaxPriorityFeePerGasRequest()
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_maxPriorityFeePerGas",
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get the latest block number.
+        /// </summary>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateBlockNumberRequest()
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_blockNumber",
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get information about a block by block number.
+        /// </summary>
+        /// <param name="block">Optional block number, or Latest/Pending/Earliest. Defaults to Latest.</param>
+        /// <param name="includeTransactions">If true, returns full transaction objects. If false, only returns transaction hashes.</param>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateBlockByNumberRequest(
+            BlockNumber? block = null,
+            bool includeTransactions = true)
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_getBlockByNumber",
+                Params =
+                [
+                    block?.Value ?? BlockNumber.Latest.Value,
+                    includeTransactions
+                ]
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get the transaction receipt for a transaction.
+        /// </summary>
+        /// <param name="txId">The transaction hash.</param>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateTransactionReceiptRequest(string txId)
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_getTransactionReceipt",
+                Params = [txId]
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get logs matching the specified filter criteria.
+        /// </summary>
+        /// <param name="fromBlock">Optional start block number.</param>
+        /// <param name="toBlock">Optional end block number.</param>
+        /// <param name="address">Optional contract address to filter by.</param>
+        /// <param name="topics">Optional array of topics to filter by.</param>
+        /// <param name="blockHash">Optional block hash to get logs from a single block.</param>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateLogsRequest(
+            BlockNumber? fromBlock = null,
+            BlockNumber? toBlock = null,
+            string? address = null,
+            string[]? topics = null,
+            string? blockHash = null)
+        {
+            var @params = new Dictionary<string, object>();
+
+            if (fromBlock != null)
+                @params.Add("fromBlock", fromBlock.Value.Value);
+
+            if (toBlock != null)
+                @params.Add("toBlock", toBlock.Value.Value);
+
+            if (address != null)
+                @params.Add("address", address);
+
+            if (topics != null && topics.Length > 0)
+                @params.Add("topics", topics);
+
+            if (blockHash != null)
+                @params.Add("blockHash", blockHash);
+
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_getLogs",
+                Params = @params.Count > 0
+                    ? [@params]
+                    : []
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to get logs matching the specified filter criteria.
+        /// </summary>
+        /// <param name="fromBlock">Optional start block number.</param>
+        /// <param name="toBlock">Optional end block number.</param>
+        /// <param name="address">Optional contract address to filter by.</param>
+        /// <param name="topics">Optional array of topics to filter by.</param>
+        /// <param name="blockHash">Optional block hash to get logs from a single block.</param>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateLogsWithTopicsFilterRequest(
+            BlockNumber? fromBlock = null,
+            BlockNumber? toBlock = null,
+            string? address = null,
+            string[][]? topics = null,
+            string? blockHash = null)
+        {
+            var @params = new Dictionary<string, object>();
+
+            if (fromBlock != null)
+                @params.Add("fromBlock", fromBlock.Value.Value);
+
+            if (toBlock != null)
+                @params.Add("toBlock", toBlock.Value.Value);
+
+            if (address != null)
+                @params.Add("address", address);
+
+            if (topics != null && topics.Length > 0)
+            {
+                var topicsFilter = new List<object?>();
+
+                foreach (var topic in topics)
+                {
+                    if (topic == null || topic.Length == 0)
+                    {
+                        topicsFilter.Add(null);
+                    }
+                    else if (topic.Length == 1)
+                    {
+                        topicsFilter.Add(topic[0]);
+                    }
+                    else
+                    {
+                        topicsFilter.Add(topic);
+                    }
+                }
+
+                @params.Add("topics", topicsFilter);
+            }
+
+            if (blockHash != null)
+                @params.Add("blockHash", blockHash);
+
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_getLogs",
+                Params = @params.Count > 0
+                    ? [@params]
+                    : []
+            };
+        }
+
+        public static RpcRequest CreateEstimateGasRequest(
+            string to,
+            string? from = null,
+            BigInteger? gas = null,
+            BigInteger? gasPrice = null,
+            BigInteger? maxPriorityFeePerGas = null,
+            BigInteger? maxFeePerGas = null,
+            BigInteger? value = null,
+            string? data = null,
+            BlockNumber? block = null)
+        {
+            var @params = new Dictionary<string, object>();
+
+            if (from != null)
+                @params.Add("from", from);
+
+            if (gas != null)
+                @params.Add("gas", new HexBigInteger(gas.Value).HexValue);
+
+            if (gasPrice != null)
+                @params.Add("gasPrice", new HexBigInteger(gasPrice.Value).HexValue);
+
+            if (maxPriorityFeePerGas != null)
+                @params.Add("maxPriorityFeePerGas", new HexBigInteger(maxPriorityFeePerGas.Value).HexValue);
+
+            if (maxFeePerGas != null)
+                @params.Add("maxFeePerGas", new HexBigInteger(maxFeePerGas.Value).HexValue);
+
+            if (value != null)
+                @params.Add("value", new HexBigInteger(value.Value).HexValue);
+
+            if (data != null)
+                @params.Add("data", data);
+
+            @params.Add("to", to);
+
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_estimateGas",
+                Params =
+                [
+                    @params,
+                    block?.Value ?? BlockNumber.Latest.Value
+                ]
+            };
+        }
+
+        public static RpcRequest CreateCallRequest(
+            string to,
+            string? from = null,
+            BigInteger? gas = null,
+            BigInteger? gasPrice = null,
+            BigInteger? value = null,
+            string? input = null,
+            BlockNumber? block = null)
+        {
+            var @params = new Dictionary<string, object>();
+
+            if (from != null)
+                @params.Add("from", from);
+
+            if (gas != null)
+                @params.Add("gas", new HexBigInteger(gas.Value).HexValue);
+
+            if (gasPrice != null)
+                @params.Add("gasPrice", new HexBigInteger(gasPrice.Value).HexValue);
+
+            if (value != null)
+                @params.Add("value", new HexBigInteger(value.Value).HexValue);
+
+            if (input != null)
+                @params.Add("input", input);
+
+            @params.Add("to", to);
+
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_call",
+                Params =
+                [
+                    @params,
+                    block?.Value ?? BlockNumber.Latest.Value
+                ]
+            };
+        }
+
+        /// <summary>
+        /// Creates a request to send a raw transaction to the network.
+        /// </summary>
+        /// <param name="signedTransactionData">The signed transaction data as a hexadecimal string (without 0x prefix).</param>
+        /// <returns>A RpcRequest object containing the request details.</returns>
+        public static RpcRequest CreateSendRawTransactionRequest(string signedTransactionData)
+        {
+            return new RpcRequest
+            {
+                Id = 1,
+                JsonRpc = "2.0",
+                Method = "eth_sendRawTransaction",
+                Params = ["0x" + signedTransactionData]
+            };
         }
 
         private static NullableResult<JsonDocument> MapResponse(Response<JsonDocument>? response)
