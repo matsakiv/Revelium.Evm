@@ -17,7 +17,7 @@ namespace Revelium.Evm.Rpc.Parameters
     {
         public string Value { get; init; } = type switch
         {
-            BlockNumberType.Value => new HexBigInteger(blockNumber).ToString(),
+            BlockNumberType.Value => new HexBigInteger(blockNumber).HexValue,
             BlockNumberType.Earliest => "earliest",
             BlockNumberType.Latest => "latest",
             BlockNumberType.Safe => "safe",
