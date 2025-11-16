@@ -2,22 +2,21 @@
 using System.Numerics;
 using System.Text.Json.Serialization;
 
-namespace Revelium.Evm.BlockScout.Models
+namespace Revelium.Evm.BlockScout.Models;
+
+public class Amount
 {
-    public class Amount
+    [JsonPropertyName("decimals")]
+    public string Decimals { get; set; } = default!;
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = default!;
+
+    public decimal ToDecimal()
     {
-        [JsonPropertyName("decimals")]
-        public string Decimals { get; set; } = default!;
-        [JsonPropertyName("value")]
-        public string Value { get; set; } = default!;
+        var decimals = int.Parse(Decimals);
+        var exponent = BigInteger.Pow(10, decimals);
+        var value = BigInteger.Parse(Value);
 
-        public decimal ToDecimal()
-        {
-            var decimals = int.Parse(Decimals);
-            var exponent = BigInteger.Pow(10, decimals);
-            var value = BigInteger.Parse(Value);
-
-            return value.Divide(exponent);
-        }
+        return value.Divide(exponent);
     }
 }

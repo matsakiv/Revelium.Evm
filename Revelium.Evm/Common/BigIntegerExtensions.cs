@@ -1,19 +1,18 @@
 ﻿using System.Numerics;
 
-namespace Revelium.Evm.Common
+namespace Revelium.Evm.Common;
+
+public static class BigIntegerExtensions
 {
-    public static class BigIntegerExtensions
+    public static decimal Divide(this BigInteger value, BigInteger divisor)
     {
-        public static decimal Divide(this BigInteger value, BigInteger divisor)
-        {
-            var integerPart = BigInteger.DivRem(value, divisor, out var remainder);
+        var integerPart = BigInteger.DivRem(value, divisor, out var remainder);
 
-            var result = (decimal)integerPart;
+        var result = (decimal)integerPart;
 
-            if (remainder.IsZero)
-                return result;
+        if (remainder.IsZero)
+            return result;
 
-            return result + (decimal)remainder / (decimal)divisor;
-        }
+        return result + (decimal)remainder / (decimal)divisor;
     }
 }

@@ -4,176 +4,175 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Revelium.Evm.Common
+namespace Revelium.Evm.Common;
+
+public delegate Task<Result<TResult>> HandlerCallback<TParameters, TResult>(
+    TParameters parameters,
+    CancellationToken cancellationToken);
+
+public class BoundedCallSequencer<TParameters, TResult>(
+    HandlerCallback<TParameters, TResult> handlerCallback,
+    int capacity)
 {
-    public delegate Task<Result<TResult>> HandlerCallback<TParameters, TResult>(
-        TParameters parameters,
-        CancellationToken cancellationToken);
+    public const int PROCESS_QUEUE_ERROR = 1;
 
-    public class BoundedCallSequencer<TParameters, TResult>(
-        HandlerCallback<TParameters, TResult> handlerCallback,
-        int capacity)
+    public event EventHandler<SuccessCallEventArgs<TParameters, TResult>>? OnSuccess;
+    public event EventHandler<ErrorEventArgs>? OnError;
+
+    private class CallData
     {
-        public const int PROCESS_QUEUE_ERROR = 1;
+        public string Id { get; set; } = default!;
+        public TResult? Result { get; set; }
+        public TParameters Parameters { get; set; } = default!;
+        public Func<SuccessCallEventArgs<TParameters, TResult>, CancellationToken, Task>? OnSuccess { get; set; }
+        public Func<ErrorCallEventArgs<TParameters>, CancellationToken, Task>? OnError { get; set; }
+    }
 
-        public event EventHandler<SuccessCallEventArgs<TParameters, TResult>>? OnSuccess;
-        public event EventHandler<ErrorEventArgs>? OnError;
+    private readonly HandlerCallback<TParameters, TResult> _handlerCallback = handlerCallback
+        ?? throw new ArgumentNullException(nameof(handlerCallback));
+    private readonly AsyncQueue<CallData> _pendingQueue = new();
+    private readonly BoundedAsyncQueue<CallData> _waitingQueue = new(capacity);
+    private readonly SemaphoreSlim _sync = new(1);
 
-        private class CallData
+    public int PendingQueueSize => _pendingQueue.Count;
+    public int WaitingQueueSize => _waitingQueue.Count;
+    public int Capacity => _waitingQueue.Capacity;
+
+    public async Task EnqueueAsync(
+        string callId,
+        TParameters parameters,
+        Func<SuccessCallEventArgs<TParameters, TResult>, CancellationToken, Task>? onSuccess = null,
+        Func<ErrorCallEventArgs<TParameters>, CancellationToken, Task>? onError = null,
+        CancellationToken cancellationToken = default)
+    {
+        var callData = new CallData
         {
-            public string Id { get; set; } = default!;
-            public TResult? Result { get; set; }
-            public TParameters Parameters { get; set; } = default!;
-            public Func<SuccessCallEventArgs<TParameters, TResult>, CancellationToken, Task>? OnSuccess { get; set; }
-            public Func<ErrorCallEventArgs<TParameters>, CancellationToken, Task>? OnError { get; set; }
-        }
+            Id = callId,
+            Parameters = parameters,
+            OnSuccess = onSuccess,
+            OnError = onError
+        };
 
-        private readonly HandlerCallback<TParameters, TResult> _handlerCallback = handlerCallback
-            ?? throw new ArgumentNullException(nameof(handlerCallback));
-        private readonly AsyncQueue<CallData> _pendingQueue = new();
-        private readonly BoundedAsyncQueue<CallData> _waitingQueue = new(capacity);
-        private readonly SemaphoreSlim _sync = new(1);
+        await _pendingQueue.EnqueueAsync(callData, cancellationToken);
 
-        public int PendingQueueSize => _pendingQueue.Count;
-        public int WaitingQueueSize => _waitingQueue.Count;
-        public int Capacity => _waitingQueue.Capacity;
+        _ = RunQueueProcessingInBackground(cancellationToken);
+    }
 
-        public async Task EnqueueAsync(
-            string callId,
-            TParameters parameters,
-            Func<SuccessCallEventArgs<TParameters, TResult>, CancellationToken, Task>? onSuccess = null,
-            Func<ErrorCallEventArgs<TParameters>, CancellationToken, Task>? onError = null,
-            CancellationToken cancellationToken = default)
+    public async Task<bool> TryCancelAsync(
+        string callId,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _pendingQueue.RemoveAsync(
+            x => x.Id == callId,
+            cancellationToken);
+
+        _ = RunQueueProcessingInBackground(cancellationToken);
+
+        return result > 0;
+    }
+
+    public async Task<bool> CompleteAsync(
+        string callId,
+        CancellationToken cancellationToken = default)
+    {
+        var removed = await _waitingQueue.RemoveAsync(
+            x => x.Id == callId,
+            cancellationToken);
+
+        return removed > 0;
+    }
+
+    private Task RunQueueProcessingInBackground(
+        CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => ProcessQueueAsync(cancellationToken), cancellationToken);
+    }
+
+    private async Task ProcessQueueAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
         {
-            var callData = new CallData
+            await _sync.WaitAsync(cancellationToken);
+
+            while (true)
             {
-                Id = callId,
-                Parameters = parameters,
-                OnSuccess = onSuccess,
-                OnError = onError
-            };
-
-            await _pendingQueue.EnqueueAsync(callData, cancellationToken);
-
-            _ = RunQueueProcessingInBackground(cancellationToken);
-        }
-
-        public async Task<bool> TryCancelAsync(
-            string callId,
-            CancellationToken cancellationToken = default)
-        {
-            var result = await _pendingQueue.RemoveAsync(
-                x => x.Id == callId,
-                cancellationToken);
-
-            _ = RunQueueProcessingInBackground(cancellationToken);
-
-            return result > 0;
-        }
-
-        public async Task<bool> CompleteAsync(
-            string callId,
-            CancellationToken cancellationToken = default)
-        {
-            var removed = await _waitingQueue.RemoveAsync(
-                x => x.Id == callId,
-                cancellationToken);
-
-            return removed > 0;
-        }
-
-        private Task RunQueueProcessingInBackground(
-            CancellationToken cancellationToken = default)
-        {
-            return Task.Run(() => ProcessQueueAsync(cancellationToken), cancellationToken);
-        }
-
-        private async Task ProcessQueueAsync(
-            CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                await _sync.WaitAsync(cancellationToken);
-
-                while (true)
+                if (!await _waitingQueue.WaitToEnqueueAsync(cancellationToken))
                 {
-                    if (!await _waitingQueue.WaitToEnqueueAsync(cancellationToken))
+                    OnError?.Invoke(this, new ErrorEventArgs
                     {
-                        OnError?.Invoke(this, new ErrorEventArgs
-                        {
-                            Error = new Error(PROCESS_QUEUE_ERROR, "Wait to enqueue error")
-                        });
-                        return;
-                    }
-
-                    var (callData, isNotEmpty) = await _pendingQueue.TryDequeue(cancellationToken);
-
-                    if (!isNotEmpty)
-                        return; // queue is empty
-
-                    // call handler
-                    var (result, error) = await _handlerCallback(
-                        callData.Parameters,
-                        cancellationToken);
-
-                    if (error != null)
-                    {
-                        var handlerError = new Error(PROCESS_QUEUE_ERROR, "Handler callback error", error);
-
-                        if (callData.OnError != null)
-                        {
-                            await callData.OnError(
-                                new ErrorCallEventArgs<TParameters>
-                                {
-                                    CallId = callData.Id,
-                                    Parameters = callData.Parameters,
-                                    Error = handlerError
-                                },
-                                cancellationToken);
-                        }
-
-                        OnError?.Invoke(this, new ErrorEventArgs
-                        {
-                            Error = handlerError
-                        });
-
-                        continue;
-                    }
-
-                    callData.Result = result;
-
-                    await _waitingQueue.EnqueueAsync(callData, cancellationToken);
-
-                    var successEventArgs = new SuccessCallEventArgs<TParameters, TResult>
-                    {
-                        CallId = callData.Id,
-                        Parameters = callData.Parameters,
-                        Result = callData.Result
-                    };
-
-                    if (callData.OnSuccess != null)
-                    {
-                        await callData.OnSuccess(successEventArgs, cancellationToken);
-                    }
-
-                    OnSuccess?.Invoke(this, successEventArgs);
+                        Error = new Error(PROCESS_QUEUE_ERROR, "Wait to enqueue error")
+                    });
+                    return;
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // task canceled
-            }
-            catch (Exception e)
-            {
-                OnError?.Invoke(this, new ErrorEventArgs
+
+                var (callData, isNotEmpty) = await _pendingQueue.TryDequeue(cancellationToken);
+
+                if (!isNotEmpty)
+                    return; // queue is empty
+
+                // call handler
+                var (result, error) = await _handlerCallback(
+                    callData.Parameters,
+                    cancellationToken);
+
+                if (error != null)
                 {
-                    Error = new Error(PROCESS_QUEUE_ERROR, "Wait to enqueue error", e)
-                });
+                    var handlerError = new Error(PROCESS_QUEUE_ERROR, "Handler callback error", error);
+
+                    if (callData.OnError != null)
+                    {
+                        await callData.OnError(
+                            new ErrorCallEventArgs<TParameters>
+                            {
+                                CallId = callData.Id,
+                                Parameters = callData.Parameters,
+                                Error = handlerError
+                            },
+                            cancellationToken);
+                    }
+
+                    OnError?.Invoke(this, new ErrorEventArgs
+                    {
+                        Error = handlerError
+                    });
+
+                    continue;
+                }
+
+                callData.Result = result;
+
+                await _waitingQueue.EnqueueAsync(callData, cancellationToken);
+
+                var successEventArgs = new SuccessCallEventArgs<TParameters, TResult>
+                {
+                    CallId = callData.Id,
+                    Parameters = callData.Parameters,
+                    Result = callData.Result
+                };
+
+                if (callData.OnSuccess != null)
+                {
+                    await callData.OnSuccess(successEventArgs, cancellationToken);
+                }
+
+                OnSuccess?.Invoke(this, successEventArgs);
             }
-            finally
+        }
+        catch (OperationCanceledException)
+        {
+            // task canceled
+        }
+        catch (Exception e)
+        {
+            OnError?.Invoke(this, new ErrorEventArgs
             {
-                _sync.Release();
-            }
+                Error = new Error(PROCESS_QUEUE_ERROR, "Wait to enqueue error", e)
+            });
+        }
+        finally
+        {
+            _sync.Release();
         }
     }
 }

@@ -1,10 +1,9 @@
 ﻿using Incendium;
 using System;
 
-namespace Revelium.Evm.Common.Events
+namespace Revelium.Evm.Common.Events;
+
+public class ErrorEventArgs : EventArgs
 {
-    public class ErrorEventArgs : EventArgs
-    {
-        public Error Error { get; init; } = default!;
-    }
+    public Error Error { get; init; } = default!;
 }

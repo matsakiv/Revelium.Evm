@@ -4,18 +4,17 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Revelium.Evm.Rpc.Abstract
-{
-    public interface IRpcTransactionTracker
-    {
-        event EventHandler<ErrorEventArgs>? Canceled;
-        event EventHandler<ErrorEventArgs>? ErrorReceived;
-        event EventHandler<TransactionReceipt>? ReceiptReceived;
+namespace Revelium.Evm.Rpc.Abstract;
 
-        Task TrackTransactionAsync(
-            string txId,
-            TimeSpan updateInterval,
-            TimeSpan? timeOut = null,
-            CancellationToken cancellationToken = default);
-    }
+public interface IRpcTransactionTracker
+{
+    event EventHandler<ErrorEventArgs>? Canceled;
+    event EventHandler<ErrorEventArgs>? ErrorReceived;
+    event EventHandler<TransactionReceipt>? ReceiptReceived;
+
+    Task TrackTransactionAsync(
+        string txId,
+        TimeSpan updateInterval,
+        TimeSpan? timeOut = null,
+        CancellationToken cancellationToken = default);
 }

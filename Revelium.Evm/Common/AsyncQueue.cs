@@ -3,117 +3,116 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Revelium.Evm.Common
+namespace Revelium.Evm.Common;
+
+public sealed class AsyncQueue<T> : IDisposable
 {
-    public sealed class AsyncQueue<T> : IDisposable
+    private readonly List<T> _data;
+    private readonly SemaphoreSlim _sync;
+    private bool _disposed;
+
+    public int Count => _data.Count;
+    public bool IsEmpty => _data.Count == 0;
+
+    public AsyncQueue()
     {
-        private readonly List<T> _data;
-        private readonly SemaphoreSlim _sync;
-        private bool _disposed;
+        _data = [];
+        _sync = new SemaphoreSlim(1);
+    }
 
-        public int Count => _data.Count;
-        public bool IsEmpty => _data.Count == 0;
-
-        public AsyncQueue()
+    public async Task EnqueueAsync(T item, CancellationToken cancellationToken = default)
+    {
+        try
         {
-            _data = [];
-            _sync = new SemaphoreSlim(1);
+            await _sync.WaitAsync(cancellationToken);
+
+            _data.Add(item);
         }
-
-        public async Task EnqueueAsync(T item, CancellationToken cancellationToken = default)
+        finally
         {
-            try
-            {
-                await _sync.WaitAsync(cancellationToken);
-
-                _data.Add(item);
-            }
-            finally
-            {
-                _sync.Release();
-            }
+            _sync.Release();
         }
+    }
 
-        public async Task<(T, bool)> TryDequeue(CancellationToken cancellationToken = default)
+    public async Task<(T, bool)> TryDequeue(CancellationToken cancellationToken = default)
+    {
+        try
         {
-            try
-            {
-                await _sync.WaitAsync(cancellationToken);
+            await _sync.WaitAsync(cancellationToken);
 
-                if (_data.Count == 0)
-                    return (default!, false);
+            if (_data.Count == 0)
+                return (default!, false);
 
-                var item = _data[0];
-                _data.RemoveAt(0);
+            var item = _data[0];
+            _data.RemoveAt(0);
 
-                return (item, true);
-            }
-            finally
-            {
-                _sync.Release();
-            }
+            return (item, true);
         }
-
-        public async Task<(T, bool)> TryPeek(CancellationToken cancellationToken = default)
+        finally
         {
-            try
-            {
-                await _sync.WaitAsync(cancellationToken);
-
-                if (_data.Count == 0)
-                    return (default!, false);
-
-                return (_data[0], true);
-            }
-            finally
-            {
-                _sync.Release();
-            }
+            _sync.Release();
         }
+    }
 
-        public async Task<int> RemoveAsync(Predicate<T> predicate, CancellationToken cancellationToken = default)
+    public async Task<(T, bool)> TryPeek(CancellationToken cancellationToken = default)
+    {
+        try
         {
-            try
+            await _sync.WaitAsync(cancellationToken);
+
+            if (_data.Count == 0)
+                return (default!, false);
+
+            return (_data[0], true);
+        }
+        finally
+        {
+            _sync.Release();
+        }
+    }
+
+    public async Task<int> RemoveAsync(Predicate<T> predicate, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = 0;
+
+            await _sync.WaitAsync(cancellationToken);
+
+            for (var i = 0; i < _data.Count;)
             {
-                var result = 0;
-
-                await _sync.WaitAsync(cancellationToken);
-
-                for (var i = 0; i < _data.Count;)
+                if (predicate(_data[i]))
                 {
-                    if (predicate(_data[i]))
-                    {
-                        _data.RemoveAt(i);
-                        result++;
-                    }
-                    else i++;
+                    _data.RemoveAt(i);
+                    result++;
                 }
+                else i++;
+            }
 
-                return result;
-            }
-            finally
-            {
-                _sync.Release();
-            }
+            return result;
         }
-
-        private void Dispose(bool disposing)
+        finally
         {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _sync?.Dispose();
-                }
-
-                _disposed = true;
-            }
+            _sync.Release();
         }
+    }
 
-        public void Dispose()
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
         {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            if (disposing)
+            {
+                _sync?.Dispose();
+            }
+
+            _disposed = true;
         }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

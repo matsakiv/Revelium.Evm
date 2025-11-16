@@ -1,12 +1,11 @@
 ﻿using Nethereum.Model;
 
-namespace Revelium.Evm.Crypto.Abstract
+namespace Revelium.Evm.Crypto.Abstract;
+
+public interface ISigner
 {
-    public interface ISigner
-    {
-        ISignature Sign(byte[] hash);
-        bool Verify(byte[] hash, byte[] signature);
-        string GetAddress();
-        byte[] GetPublicKey();
-    }
+    ISignature Sign(byte[] hash);
+    bool Verify(byte[] hash, byte[] signature);
+    string GetAddress();
+    byte[] GetPublicKey();
 }
