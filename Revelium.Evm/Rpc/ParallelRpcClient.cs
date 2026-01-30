@@ -19,6 +19,11 @@ public class ParallelRpcClient(
     private readonly IEnumerable<RpcClient> _rpcClients = rpcClients;
     private readonly IEnumerable<RpcClient> _broadcastRpcClients = broadcastRpcClients;
 
+    /// <summary>
+    /// For ParallelRpcClient returns the Url of the first node from broadcastRpcClients list, if it is not empty.
+    /// Otherwise returns the first node from rpcClients list
+    /// </summary>
+    public string Url => _broadcastRpcClients?.FirstOrDefault()?.Url ?? _rpcClients.First().Url;
     public long? ChainId => _rpcClients.First().ChainId;
 
     /// <summary>

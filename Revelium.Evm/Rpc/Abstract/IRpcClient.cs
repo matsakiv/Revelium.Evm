@@ -1,4 +1,5 @@
 ﻿using Incendium;
+using Revelium.Evm.Common;
 using Revelium.Evm.Rpc.Models;
 using Revelium.Evm.Rpc.Parameters;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ namespace Revelium.Evm.Rpc.Abstract;
 
 public interface IRpcClient
 {
+    string Url { get; }
     long? ChainId { get; }
 
     Task<NullableResult<TResult>> CallAsync<TResult>(

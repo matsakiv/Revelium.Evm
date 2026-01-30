@@ -16,7 +16,7 @@
     <RepositoryUrl>https://github.com/matsakiv/Revelium.Evm</RepositoryUrl>
 
     <Authors>mativ</Authors>
-    <Version>0.0.20</Version>
+    <Version>0.0.21</Version>
     <Description>Revelium.Evm is .NET integration library for Etherlink and EVM-compatible networks</Description>
     <Copyright>Copyright © Igor Matsak</Copyright>
     <Title>Revelium.Evm</Title>
@@ -40,12 +40,12 @@
   <ItemGroup>
     <PackageReference Include="Incendium.Result" Version="1.0.5" />
     <PackageReference Include="Incendium.RetryPolicy" Version="1.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.3" />
-    <PackageReference Include="Nethereum.Contracts" Version="4.28.0" />
-    <PackageReference Include="Nethereum.Signer" Version="4.28.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Text.Json" Version="9.0.1" />
-    <PackageReference Include="System.Threading.Channels" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Nethereum.Contracts" Version="5.8.0" />
+    <PackageReference Include="Nethereum.Signer" Version="5.8.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="System.Text.Json" Version="10.0.2" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.2" />
   </ItemGroup>
 
 </Project>
