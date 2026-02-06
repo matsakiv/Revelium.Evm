@@ -2,6 +2,7 @@
 using Nethereum.Signer;
 using Nethereum.Util;
 using Revelium.Evm.Common;
+using System;
 using System.Numerics;
 
 namespace Revelium.Evm.Transactions.Abstract;
@@ -11,7 +12,7 @@ public abstract class TransactionRequestBase
     public string From { get; set; } = default!;
     public string To { get; set; } = default!;
     public BigInteger GasLimit { get; set; }
-    public BigInteger Nonce { get; set; }
+    public BigInteger? Nonce { get; set; }
     public BigInteger Value { get; set; }
     public string? Data { get; set; }
     public BigInteger ChainId { get; set; }
@@ -52,7 +53,7 @@ public abstract class TransactionRequestBase
             return TransactionVerificationAndRecovery
                 .VerifyTransaction(rlp);
         }
-        catch
+        catch (Exception e)
         {
             return false;
         }

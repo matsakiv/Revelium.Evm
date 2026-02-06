@@ -20,7 +20,8 @@ public static class IRpcClientExtensions
 {
     public const int TX_SEND_ERROR = 1;
     public const int TX_VERIFY_ERROR = 2;
-    public const int INVALID_RESPONSE = 2;
+    public const int INVALID_RESPONSE = 3;
+    public const int NONCE_IS_NULL = 4;
 
     private static readonly Lazy<JsonSerializerOptions> RpcJsonOptions = new(() =>
     {
@@ -54,32 +55,46 @@ public static class IRpcClientExtensions
     /// <param name="rpc">The RPC client instance.</param>
     /// <param name="tx">The transaction request.</param>
     /// <param name="signer">The transaction signer.</param>
-    /// <param name="nonceManager">Nonce manager.</param>
+    /// <param name="nonceManager">Nonce manager (optional). Used if not null and the tx.Nonce fieid is null.</param>
     /// <param name="estimateGas">Whether to estimate the gas required for the transaction.</param>
     /// <param name="estimateGasReserveInPercent">The percentage of gas to reserve for the transaction.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="logger">The logger (optional).</param>
     /// <param name="ct">A token to cancel the operation.</param>
     /// <returns>The transaction ID.</returns>
     public static async Task<Result<string>> SignAndSendTransactionAsync(
         this IRpcClient rpc,
         TransactionRequestBase tx,
         ISigner signer,
-        NonceManager nonceManager,
+        NonceManager? nonceManager = null,
         bool estimateGas = true,
         uint? estimateGasReserveInPercent = 0,
         ILogger? logger = null,
         CancellationToken ct = default)
     {
-        using var nonceLock = await nonceManager.LockAsync(tx.From, ct);
+        var useNonceManager = nonceManager != null && tx.Nonce == null;
 
-        var (nonce, nonceError) = await nonceLock.GetNonceAsync(ct);
+        using var nonceLock = useNonceManager
+            ? await nonceManager!.LockAsync(tx.From, ct)
+            : null;
 
-        if (nonceError != null)
-            return nonceError;
+        if (useNonceManager)
+        {
+            var (nonce, nonceError) = await nonceLock!.GetNonceAsync(ct);
 
-        tx.Nonce = nonce;
+            if (nonceError != null)
+                return nonceError;
 
-        logger?.LogDebug("Transaction nonce is {@nonce}", tx.Nonce.ToString());
+            tx.Nonce = nonce;
+
+            logger?.LogDebug("Transaction nonce from NonceManager is {@nonce}", tx.Nonce.ToString());
+        }
+        else
+        {
+            if (tx.Nonce == null)
+                return new Error(NONCE_IS_NULL, "Nonce is null");
+
+            logger?.LogDebug("Transaction nonce is {@nonce}", tx.Nonce.ToString());
+        }
 
         if (estimateGas)
         {
@@ -92,7 +107,7 @@ public static class IRpcClientExtensions
 
             if (estimateGasError != null)
             {
-                nonceLock.Reset(tx.Nonce);
+                nonceLock?.Reset(tx.Nonce.Value);
                 return estimateGasError;
             }
 
@@ -106,7 +121,7 @@ public static class IRpcClientExtensions
 
         if (!tx.Verify())
         {
-            nonceLock.Reset(tx.Nonce);
+            nonceLock?.Reset(tx.Nonce.Value);
             return new Error(TX_VERIFY_ERROR, "Can't verify transaction");
         }
 
@@ -114,7 +129,7 @@ public static class IRpcClientExtensions
 
         if (txSendError != null)
         {
-            nonceLock.Reset(tx.Nonce);
+            nonceLock?.Reset(tx.Nonce.Value);
             return new Error(TX_SEND_ERROR, "Transaction sending error", txSendError);
         }
 

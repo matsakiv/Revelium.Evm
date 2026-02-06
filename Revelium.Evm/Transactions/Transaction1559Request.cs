@@ -27,7 +27,7 @@ public class Transaction1559Request : TransactionRequestBase
         From = txInput.From.ToLowerInvariant();
         To = txInput.To.ToLowerInvariant();
         Value = txInput.Value?.Value ?? BigInteger.Zero;
-        Nonce = txInput.Nonce?.Value ?? BigInteger.Zero;
+        Nonce = txInput.Nonce?.Value;
         MaxFeePerGas = txInput.MaxFeePerGas?.Value ?? null;
         MaxPriorityFeePerGas = txInput.MaxPriorityFeePerGas?.Value ?? null;
         GasLimit = txInput.Gas?.Value ?? BigInteger.Zero;

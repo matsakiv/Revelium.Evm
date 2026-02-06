@@ -16,7 +16,7 @@ public class TransactionLegacyRequest : TransactionRequestBase
         From = txInput.From.ToLowerInvariant();
         To = txInput.To.ToLowerInvariant();
         Value = txInput.Value?.Value ?? BigInteger.Zero;
-        Nonce = txInput.Nonce?.Value ?? BigInteger.Zero;
+        Nonce = txInput.Nonce?.Value;
         GasPrice = txInput.GasPrice?.Value ?? BigInteger.Zero;
         GasLimit = txInput.Gas?.Value ?? BigInteger.Zero;
         Data = txInput.Data;
@@ -28,7 +28,7 @@ public class TransactionLegacyRequest : TransactionRequestBase
         var tx = new LegacyTransactionChainId(
             to: To,
             amount: Value,
-            nonce: Nonce,
+            nonce: Nonce ?? BigInteger.Zero,
             gasPrice: GasPrice,
             gasLimit: GasLimit,
             data: Data,
