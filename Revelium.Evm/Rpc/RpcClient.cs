@@ -410,6 +410,10 @@ public class RpcClient(string url, long? chainId = null, HttpClient? httpClient 
         {
             return new Error(HTTP_REQUEST_ERROR, "Http request error", ex);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return new Error(RPC_REQUEST_ERROR, "Rpc request error", ex);
@@ -466,6 +470,10 @@ public class RpcClient(string url, long? chainId = null, HttpClient? httpClient 
         {
             return new Error(INVALID_RESPONSE, "Invalid json response", ex);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return new Error(RPC_REQUEST_ERROR, "Rpc request error", ex);
@@ -503,6 +511,10 @@ public class RpcClient(string url, long? chainId = null, HttpClient? httpClient 
         catch (JsonException ex)
         {
             return new Error(INVALID_RESPONSE, "Invalid json response", ex);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

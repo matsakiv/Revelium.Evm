@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Revelium.Evm.Crypto.Abstract;
 using Revelium.Evm.Rpc;
 using Revelium.Evm.Rpc.Abstract;
+using Revelium.Evm.Rpc.Models;
 using Revelium.Evm.Rpc.Parameters;
 using Revelium.Evm.Services;
 using Revelium.Evm.Transactions;
@@ -55,19 +56,89 @@ public static class IRpcClientExtensions
     /// <param name="rpc">The RPC client instance.</param>
     /// <param name="tx">The transaction request.</param>
     /// <param name="signer">The transaction signer.</param>
-    /// <param name="nonceManager">Nonce manager (optional). Used if not null and the tx.Nonce fieid is null.</param>
-    /// <param name="estimateGas">Whether to estimate the gas required for the transaction.</param>
-    /// <param name="estimateGasReserveInPercent">The percentage of gas to reserve for the transaction.</param>
+    /// <param name="nonceManager">Nonce manager (optional). Used if not null and tx.Nonce is null.</param>
+    /// <param name="verifyTx">Whether to verify the signed transaction before sending.</param>
     /// <param name="logger">The logger (optional).</param>
     /// <param name="ct">A token to cancel the operation.</param>
-    /// <returns>The transaction ID.</returns>
-    public static async Task<Result<string>> SignAndSendTransactionAsync(
+    /// <returns>The transaction ID (hash).</returns>
+    public static Task<Result<string>> SignAndSendTransactionAsync(
         this IRpcClient rpc,
         TransactionRequestBase tx,
         ISigner signer,
         NonceManager? nonceManager = null,
-        bool estimateGas = true,
-        uint? estimateGasReserveInPercent = 0,
+        bool verifyTx = true,
+        ILogger? logger = null,
+        CancellationToken ct = default)
+    {
+        return FillSignAndSendAsync(
+            rpc, tx, signer,
+            sendFunc: signedTx => rpc.SendTransactionAsync(signedTx, ct),
+            nonceManager, verifyTx, logger, ct);
+    }
+
+    /// <summary>
+    /// Signs and sends a transaction, also retrieving the current block in a single batch RPC request.
+    /// This allows precise timing measurement of which block was current at the moment of sending.
+    /// </summary>
+    /// <param name="rpc">The RPC client instance.</param>
+    /// <param name="tx">The transaction request.</param>
+    /// <param name="signer">The transaction signer.</param>
+    /// <param name="nonceManager">Nonce manager (optional). Used if not null and tx.Nonce is null.</param>
+    /// <param name="verifyTx">Whether to verify the signed transaction before sending.</param>
+    /// <param name="logger">The logger (optional).</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>A tuple containing the transaction ID (hash) and the block at the time of sending.</returns>
+    public static Task<Result<(string TxId, LightBlock Block)>> SignAndSendTransactionWithBlockAsync(
+        this IRpcClient rpc,
+        TransactionRequestBase tx,
+        ISigner signer,
+        NonceManager? nonceManager = null,
+        bool verifyTx = true,
+        ILogger? logger = null,
+        CancellationToken ct = default)
+    {
+        return FillSignAndSendAsync(
+            rpc, tx, signer,
+            sendFunc: async signedTx =>
+            {
+                var sendReq = RpcClient.CreateSendRawTransactionRequest(signedTx.GetRlpEncoded());
+                var blockReq = RpcClient.CreateBlockByNumberRequest(BlockNumber.Latest, includeTransactions: false);
+
+                var (batchResult, batchError) = await rpc.SendBatchAsync<string, LightBlock>(sendReq, blockReq, ct);
+
+                if (batchError != null)
+                    return batchError;
+
+                var (sendResult, blockResult) = batchResult;
+
+                var (txId, txError) = sendResult;
+
+                if (txError != null)
+                    return new Error(TX_SEND_ERROR, "Transaction sending error", txError);
+
+                if (txId == null)
+                    return new Error(TX_SEND_ERROR, "Transaction ID is null");
+
+                var (block, blockError) = blockResult;
+
+                if (blockError != null)
+                    return new Error(TX_SEND_ERROR, "Failed to get block at send time", blockError);
+
+                if (block == null)
+                    return new Error(TX_SEND_ERROR, "Block is null");
+
+                return new Result<(string, LightBlock)>((txId, block));
+            },
+            nonceManager, verifyTx, logger, ct);
+    }
+
+    private static async Task<Result<T>> FillSignAndSendAsync<T>(
+        IRpcClient rpc,
+        TransactionRequestBase tx,
+        ISigner signer,
+        Func<TransactionRequestBase, Task<Result<T>>> sendFunc,
+        NonceManager? nonceManager = null,
+        bool verifyTx = true,
         ILogger? logger = null,
         CancellationToken ct = default)
     {
@@ -96,7 +167,7 @@ public static class IRpcClientExtensions
             logger?.LogDebug("Transaction nonce is {@nonce}", tx.Nonce.ToString());
         }
 
-        if (estimateGas)
+        if (tx.EstimateGas)
         {
             var (estimatedGas, estimateGasError) = tx switch
             {
@@ -107,33 +178,33 @@ public static class IRpcClientExtensions
 
             if (estimateGasError != null)
             {
-                nonceLock?.Reset(tx.Nonce.Value);
+                nonceLock?.Reset(tx.Nonce!.Value);
                 return estimateGasError;
             }
 
             tx.GasLimit = estimatedGas;
 
-            if (estimateGasReserveInPercent != null && estimateGasReserveInPercent >= 0)
-                tx.GasLimit += tx.GasLimit / 100 * estimateGasReserveInPercent.Value;
+            if (tx.EstimateGasReserveInPercent != null && tx.EstimateGasReserveInPercent >= 0)
+                tx.GasLimit += tx.GasLimit * tx.EstimateGasReserveInPercent.Value / 100;
         }
 
         signer.Sign(tx);
 
-        if (!tx.Verify())
+        if (verifyTx && !tx.Verify())
         {
-            nonceLock?.Reset(tx.Nonce.Value);
+            nonceLock?.Reset(tx.Nonce!.Value);
             return new Error(TX_VERIFY_ERROR, "Can't verify transaction");
         }
 
-        var (txId, txSendError) = await rpc.SendTransactionAsync(tx, ct);
+        var (result, sendError) = await sendFunc(tx);
 
-        if (txSendError != null)
+        if (sendError != null)
         {
-            nonceLock?.Reset(tx.Nonce.Value);
-            return new Error(TX_SEND_ERROR, "Transaction sending error", txSendError);
+            nonceLock?.Reset(tx.Nonce!.Value);
+            return sendError;
         }
 
-        return txId;
+        return result;
     }
 
     /// <summary>

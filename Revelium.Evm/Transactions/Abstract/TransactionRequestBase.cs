@@ -2,7 +2,6 @@
 using Nethereum.Signer;
 using Nethereum.Util;
 using Revelium.Evm.Common;
-using System;
 using System.Numerics;
 
 namespace Revelium.Evm.Transactions.Abstract;
@@ -20,6 +19,21 @@ public abstract class TransactionRequestBase
     public byte[]? R { get; set; }
     public byte[]? S { get; set; }
     public byte[]? V { get; set; }
+
+    /// <summary>
+    /// Optional unique client-generated request id to track the transaction request
+    /// </summary>
+    public string? RequestId { get; init; } = default!;
+
+    /// <summary>
+    /// Flag indicating if gas should be estimated
+    /// </summary>
+    public bool EstimateGas { get; init; }
+
+    /// <summary>
+    /// Optional gas reserve percentage over the estimated gas
+    /// </summary>
+    public uint? EstimateGasReserveInPercent { get; init; }
 
     public abstract SignedTransaction GetTransaction();
 
@@ -53,7 +67,7 @@ public abstract class TransactionRequestBase
             return TransactionVerificationAndRecovery
                 .VerifyTransaction(rlp);
         }
-        catch (Exception e)
+        catch
         {
             return false;
         }
