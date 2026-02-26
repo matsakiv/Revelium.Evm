@@ -80,7 +80,7 @@ public class RpcTransactionTracker(
                         return;
                     }
 
-                    _logger?.LogInformation("Waiting for {txId} receipt", txId);
+                    _logger?.LogTrace("Waiting for {txId} receipt", txId);
 
                     await Task.Delay(updateInterval, cancellationToken);
                 }

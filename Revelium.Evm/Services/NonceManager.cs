@@ -176,6 +176,8 @@ public class NonceManager : IHostedService
             _cts = new CancellationTokenSource();
             _isRunning = true;
 
+            _logger?.LogInformation("NonceManager started for {AddressCount} addresses", _options.Addresses.Length);
+
             _ = Task.Run(async () => await DoWorkAsync(_cts.Token), _cts.Token);
         }
 
@@ -299,7 +301,7 @@ public class NonceManager : IHostedService
 
             TrySetNetworkNonce(address.ToLowerInvariant(), transactionCount, DateTimeOffset.UtcNow);
 
-            _logger?.LogInformation(
+            _logger?.LogDebug(
                 "Network nonce for {Address} is {Nonce}",
                 address,
                 transactionCount.ToString());

@@ -81,6 +81,8 @@ public class GasStation(
             _cts = new CancellationTokenSource();
             _isRunning = true;
 
+            _logger?.LogInformation("GasStation started");
+
             _ = Task.Run(async () => await DoWorkAsync(_cts.Token), _cts.Token);
         }
 
@@ -146,7 +148,7 @@ public class GasStation(
         }
         catch (OperationCanceledException)
         {
-            // expected
+            _logger?.LogInformation("GasStation stopped");
         }
         catch (Exception ex)
         {
@@ -193,6 +195,11 @@ public class GasStation(
             _baseFeePerGas = baseFeePerGas;
             _maxPriorityFeePerGas = maxPriorityFeePerGas;
         }
+
+        _logger?.LogTrace(
+            "Gas prices updated: BaseFee={BaseFeePerGas}, MaxPriorityFee={MaxPriorityFeePerGas}",
+            baseFeePerGas.ToString(),
+            maxPriorityFeePerGas.ToString());
 
         OnFeePerGasUpdated?.Invoke(this, new FeePerGasEventArgs
         {
