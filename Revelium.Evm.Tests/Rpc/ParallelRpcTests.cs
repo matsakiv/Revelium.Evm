@@ -53,6 +53,17 @@ public class ParallelRpcTests
             .ThrowsAsync(new HttpRequestException("Network error"));
     }
 
+    private static void SetupTimeout(Mock<HttpMessageHandler> handler, string url)
+    {
+        handler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString() == url),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("Connect timeout"));
+    }
+
     private static void SetupRpcError(Mock<HttpMessageHandler> handler, string url, int errorCode, string errorMessage)
     {
         var response = new
@@ -489,5 +500,68 @@ public class ParallelRpcTests
             var parallelClient = new ParallelRpcClient([], []);
             await parallelClient.GetBalanceAsync(ADDRESS);
         });
+    }
+
+    [Fact]
+    public async Task Test_ParallelRpcClient_FirstClientTimeout_SecondSucceeds()
+    {
+        // Arrange
+        var handler1 = new Mock<HttpMessageHandler>();
+        var handler2 = new Mock<HttpMessageHandler>();
+        SetupTimeout(handler1, RPC_URL_1);
+        SetupJsonRpcResponseResult(handler2, RPC_URL_2, "0xb9052a11d665600");
+
+        var client1 = CreateRpcClient(RPC_URL_1, handler1);
+        var client2 = CreateRpcClient(RPC_URL_2, handler2);
+        var parallelClient = new ParallelRpcClient([client1, client2], []);
+
+        // Act
+        var (balance, error) = await parallelClient.GetBalanceAsync(ADDRESS);
+
+        // Assert
+        Assert.Null(error);
+        Assert.Equal(833256783000000000, balance);
+    }
+
+    [Fact]
+    public async Task Test_ParallelRpcClient_AllClientsTimeout_ReturnsError()
+    {
+        // Arrange
+        var handler1 = new Mock<HttpMessageHandler>();
+        var handler2 = new Mock<HttpMessageHandler>();
+        SetupTimeout(handler1, RPC_URL_1);
+        SetupTimeout(handler2, RPC_URL_2);
+
+        var client1 = CreateRpcClient(RPC_URL_1, handler1);
+        var client2 = CreateRpcClient(RPC_URL_2, handler2);
+        var parallelClient = new ParallelRpcClient([client1, client2], []);
+
+        // Act
+        var (_, error) = await parallelClient.GetBalanceAsync(ADDRESS);
+
+        // Assert
+        Assert.NotNull(error);
+        Assert.Equal(RpcClient.HTTP_REQUEST_ERROR, error.Code);
+    }
+
+    [Fact]
+    public async Task Test_ParallelRpcClient_SendRawTransaction_BroadcastTimeout_SecondSucceeds()
+    {
+        // Arrange
+        var broadcastHandler1 = new Mock<HttpMessageHandler>();
+        var broadcastHandler2 = new Mock<HttpMessageHandler>();
+        SetupTimeout(broadcastHandler1, BROADCAST_URL_1);
+        SetupJsonRpcResponseResult(broadcastHandler2, BROADCAST_URL_2, "0x1234567890abcdef");
+
+        var broadcastClient1 = CreateRpcClient(BROADCAST_URL_1, broadcastHandler1);
+        var broadcastClient2 = CreateRpcClient(BROADCAST_URL_2, broadcastHandler2);
+        var parallelClient = new ParallelRpcClient([], [broadcastClient1, broadcastClient2]);
+
+        // Act
+        var (txHash, error) = await parallelClient.SendRawTransactionAsync("0xabcdef123456");
+
+        // Assert
+        Assert.Null(error);
+        Assert.Equal("0x1234567890abcdef", txHash);
     }
 }

@@ -16,7 +16,7 @@
     <RepositoryUrl>https://github.com/matsakiv/Revelium.Evm</RepositoryUrl>
 
     <Authors>mativ</Authors>
-    <Version>0.0.24</Version>
+    <Version>0.0.25</Version>
     <Description>Revelium.Evm is .NET integration library for EVM-compatible networks</Description>
     <Copyright>Copyright © Igor Matsak</Copyright>
     <Title>Revelium.Evm</Title>

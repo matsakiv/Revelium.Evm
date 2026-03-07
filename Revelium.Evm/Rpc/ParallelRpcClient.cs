@@ -53,14 +53,21 @@ public class ParallelRpcClient(
                 break;
 
             var completedTask = await Task.WhenAny(remainingTasks);
-
-            var (result, error) = await completedTask;
             completedTasks.Add(completedTask);
 
-            if (error == null)
-                return result;
+            try
+            {
+                var (result, error) = await completedTask;
 
-            lastError = error;
+                if (error == null)
+                    return result;
+
+                lastError = error;
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                lastError = new Error(RpcClient.HTTP_REQUEST_ERROR, "Request failed");
+            }
         }
 
         // All tasks completed with errors, return the last error
@@ -97,14 +104,21 @@ public class ParallelRpcClient(
                 break;
 
             var completedTask = await Task.WhenAny(remainingTasks);
-
-            var (result, error) = await completedTask;
             completedTasks.Add(completedTask);
 
-            if (error == null)
-                return result;
+            try
+            {
+                var (result, error) = await completedTask;
 
-            lastError = error;
+                if (error == null)
+                    return result;
+
+                lastError = error;
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                lastError = new Error(RpcClient.HTTP_REQUEST_ERROR, "Request failed");
+            }
         }
 
         // All tasks completed with errors, return the last error
